@@ -11,6 +11,48 @@ The Tango Finance App is a multi-platform solution focused on delivering seamles
 
 This repository serves as the starting point for the application. As the tech stack and architecture solidify (Next.js, Vue, Flutter, or hybrid), this README will expand to include technical documentation, setup instructions, and developer guidelines.
 
+
+### Getting Started
+This project is currently in early development. The setup steps below are provisional and will be updated as the architecture and tech stack are finalized.
+At this stage, the repository focuses on structure, UX flows, and architectural direction rather than a fixed implementation.
+
+#### Prequisites
+- Node (LTS)
+- npm, yarn, or pnpm
+- Git
+  
+[Specific requirements TBA]
+
+### How to Run (Early Development)
+(This section will change as features are added)
+
+````bash
+# Clone the repository
+git clone https://github.com/your-org/tango-tech.git
+cd tango-tech
+
+# Install dependencies (once applicable)
+npm install
+
+# Run development server (example)
+npm run dev
+
+````
+
+Once finalised this section will include
+- Environment setup
+- Local backend/API configuration
+- Mobile build instructions
+- Deployment previews
+
+### Project Status
+
+***STATUS:*** Under Development
+- Architecture and stack selection in progress
+- Core onboarding flows under design
+- Backend integration pending
+- Mobile implementation planned for a later phase 
+
 ### Core Objectives
 - Build a user-friendly onboarding flow adaptable for both web and mobile
 - Ensure UI/UX consistency across platforms regardless of implementation
@@ -69,3 +111,6 @@ Project structure will evolve as the chosen tech stack is finalized. Planned lay
 - Integrate backend API endpoints
 - Develop dashboard + admin tools
 - Testing, QA, and performance optimization
+
+### License 
+License information will be added once the project reaches a more stable state.
