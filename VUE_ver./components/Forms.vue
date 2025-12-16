@@ -4,39 +4,61 @@
         <AwaitingVerification v-if="hasSubmittedForm && !isVerified" />
         
         <!-- Form Selection Grid (only if no submitted form and not verified) -->
-        <div v-else-if="!selectedForm && !isVerified" class="row g-3" style="max-width: 800px; margin: 0 auto;">
-            <div 
-                v-for="(form, index) in formOptions" 
-                :key="index" 
-                class="col-4"
-            >
-                <div class="d-flex flex-column h-100">
-                    <button
-                        class="btn btn-outline-primary w-100 flex-grow-1 d-flex flex-column align-items-center justify-content-center"
-                        style="min-height: 120px; font-size: 1.25rem;"
-                        @click="selectForm(form, false)"
+        <div v-else-if="!selectedForm && !isVerified" class="forms-container">
+            <!-- Saved Forms Section (Priority) - Only show if saved forms exist -->
+            <div v-if="hasAnySavedForms" class="saved-forms-section">
+                <h2 class="section-title">
+                    <span class="section-icon">📋</span>
+                    Continue Your Form
+                </h2>
+                <p class="section-subtitle">You have saved progress. Continue where you left off or delete to start fresh.</p>
+                <div class="saved-forms-grid">
+                    <div 
+                        v-for="form in formOptionsWithSaved" 
+                        :key="form.type"
+                        class="saved-form-card"
                     >
-                        {{ form.name }}
-                    </button>
-                    <div v-if="hasSavedForm(form.type)" class="mt-2 text-center">
-                        <button
-                            class="btn btn-sm btn-success w-100 mb-1"
-                            @click="selectForm(form, true)"
-                        >
-                            Continue Saved Form
-                        </button>
-                        <button
-                            class="btn btn-sm btn-outline-danger w-100"
-                            @click="deleteSavedForm(form.type)"
-                        >
-                            Delete Saved Form
-                        </button>
+                        <div class="saved-form-header">
+                            <h3 class="saved-form-title">{{ form.name }}</h3>
+                            <span class="saved-badge">Saved</span>
+                        </div>
+                        <div class="saved-form-actions">
+                            <button
+                                class="btn btn-primary btn-continue"
+                                @click="selectForm(form, true)"
+                            >
+                                <span class="btn-icon">▶</span>
+                                Continue Form
+                            </button>
+                            <button
+                                class="btn btn-outline-danger btn-delete"
+                                @click="deleteSavedForm(form.type)"
+                            >
+                                <span class="btn-icon">🗑</span>
+                                Delete Saved Form
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
-            <!-- Empty slots to fill 3x3 grid -->
-            <div v-for="n in 6" :key="`empty-${n}`" class="col-4">
-                <div class="w-100" style="min-height: 120px;"></div>
+
+            <!-- New Forms Section - Only show if NO saved forms exist -->
+            <div v-else class="new-forms-section">
+                <h2 class="section-title">
+                    <span class="section-icon">➕</span>
+                    Start New Onboarding
+                </h2>
+                <p class="section-subtitle">Select a form type to begin your onboarding process.</p>
+                <div class="new-forms-grid">
+                    <button
+                        v-for="(form, index) in formOptions" 
+                        :key="index"
+                        class="new-form-button"
+                        @click="selectForm(form, false)"
+                    >
+                        <span class="form-name">{{ form.name }}</span>
+                    </button>
+                </div>
             </div>
         </div>
         
@@ -46,7 +68,6 @@
             :form-type="selectedForm?.type as 'agent' | 'borrower' | 'lender'"
             :form-title="selectedForm?.pageTitle || ''"
             :form-fields="getFormFields(selectedForm?.type as 'agent' | 'borrower' | 'lender')"
-            :document-requirements="getDocumentRequirements(selectedForm?.type as 'agent' | 'borrower' | 'lender')"
             :on-submit="handleFormSubmitWithRefresh"
             :load-saved-data="loadSavedData"
             @go-back="goBack"
@@ -61,10 +82,21 @@ import AwaitingVerification from './AwaitingVerification.vue'
 import { formStorage } from '../src/services/formStorage'
 import type { OnboardingSubmission, DocumentRequirement } from '../src/types/onboarding'
 import type { FormType } from '../src/types/formTypes'
+import {
+    baseFields,
+    agentFields,
+    borrowerFields,
+    lenderFields,
+    supervisorFields,
+    partnerFields,
+    adminFields,
+    type FormField
+} from './formFields'
 
 // Inject verification state from App.vue
 const verificationState = inject<{
   state: { value: { submittedFormType: FormType | null; verified: boolean } }
+  currentUserPhone: { value: string | null }
   updateSubmitted: (formType: FormType) => void
   updateVerified: (verified: boolean) => void
   hasSubmittedForm: { value: boolean }
@@ -77,16 +109,7 @@ interface FormOption {
     pageContent: string
 }
 
-interface FormField {
-    id: string
-    key: string
-    label: string
-    type: string
-    placeholder: string
-    required?: boolean
-    pattern?: string
-    minlength?: number
-}
+// FormField type is now imported from formFields/types.ts
 
 const selectedForm = ref<FormOption | null>(null)
 const loadSavedData = ref(false)
@@ -146,9 +169,26 @@ const selectForm = (form: FormOption, continueSaved: boolean = false) => {
     loadSavedData.value = continueSaved
 }
 
+// Check if any saved forms exist
+const hasAnySavedForms = computed(() => {
+    // Access refreshKey to make it reactive
+    const _ = refreshKey.value
+    return formOptions.some(form => formStorage.hasSavedForm(form.type as 'agent' | 'borrower' | 'lender'))
+})
+
+// Get forms that have saved data
+const formOptionsWithSaved = computed(() => {
+    // Access refreshKey to make it reactive
+    const _ = refreshKey.value
+    return formOptions.filter(form => formStorage.hasSavedForm(form.type as 'agent' | 'borrower' | 'lender'))
+})
+
+
 const goBack = () => {
     selectedForm.value = null
     loadSavedData.value = false
+    // Force reactivity update to refresh saved forms display
+    refreshKey.value++
 }
 
 // Check if saved forms exist (with reactivity)
@@ -178,143 +218,25 @@ const handleFormSubmitWithRefresh = async (submission: OnboardingSubmission): Pr
 
 // Define form fields for each onboarding type
 const getFormFields = (formType: string): FormField[] => {
-    const baseFields: FormField[] = [
-        {
-            id: 'fullName',
-            key: 'fullName',
-            label: 'Full Name',
-            type: 'text',
-            placeholder: 'Enter your full name',
-            required: true
-        },
-        {
-            id: 'email',
-            key: 'email',
-            label: 'Email',
-            type: 'email',
-            placeholder: 'Enter your email',
-            required: true
-        },
-        {
-            id: 'phoneNumber',
-            key: 'phoneNumber',
-            label: 'Phone Number',
-            type: 'tel',
-            placeholder: 'Enter your phone number',
-            required: true
-        }
-    ]
-    
-    // Add type-specific fields
-    if (formType === 'agent') {
-        return [
-            ...baseFields,
-            {
-                id: 'licenseNumber',
-                key: 'licenseNumber',
-                label: 'License Number',
-                type: 'text',
-                placeholder: 'Enter your license number',
-                required: true
-            },
-            {
-                id: 'yearsOfExperience',
-                key: 'yearsOfExperience',
-                label: 'Years of Experience',
-                type: 'number',
-                placeholder: 'Enter years of experience',
-                required: true
-            }
-        ]
-    } else if (formType === 'borrower') {
-        return [
-            ...baseFields,
-            {
-                id: 'loanAmount',
-                key: 'loanAmount',
-                label: 'Desired Loan Amount',
-                type: 'number',
-                placeholder: 'Enter desired loan amount',
-                required: true
-            },
-            {
-                id: 'purpose',
-                key: 'purpose',
-                label: 'Loan Purpose',
-                type: 'text',
-                placeholder: 'Describe the purpose of the loan',
-                required: true
-            }
-        ]
-    } else if (formType === 'lender') {
-        return [
-            ...baseFields,
-            {
-                id: 'institutionName',
-                key: 'institutionName',
-                label: 'Institution Name',
-                type: 'text',
-                placeholder: 'Enter your institution name',
-                required: true
-            },
-            {
-                id: 'maxLoanAmount',
-                key: 'maxLoanAmount',
-                label: 'Maximum Loan Amount',
-                type: 'number',
-                placeholder: 'Enter maximum loan amount',
-                required: true
-            }
-        ]
-    } else if (formType === 'supervisor') {
-        return [
-            ...baseFields,
-            {
-                id: 'supervisorLicenseNumber',
-                key: 'supervisorLicenseNumber',
-                label: 'Supervisor License Number',
-                type: 'text',
-                placeholder: 'Enter your supervisor license number',    
-                required: true
-            },
-            {
-                id: 'supervisorRole',
-                key: 'supervisorRole',
-                label: 'Supervisor Role',
-                type: 'text',
-                placeholder: 'Enter your admin role',
-                required: true
-            }
-        ]
-    } else if (formType === 'partner') {
-        return [
-            ...baseFields,
-            {
-                id: 'partnerLicenseNumber',
-                key: 'partnerLicenseNumber',
-                label: 'Partner License Number',
-                type: 'text',
-                placeholder: 'Enter your partner license number',
-                required: true
-            }
-        ]
-    } else if (formType === 'admin') {
-        return [
-            ...baseFields,
-            {
-                id: 'adminLicenseNumber',
-                key: 'adminLicenseNumber',
-                label: 'Admin License Number',
-                type: 'text',
-                placeholder: 'Enter your admin license number',
-                required: true
-            }
-        ]
+    switch (formType) {
+        case 'agent':
+            return [...baseFields, ...agentFields]
+        case 'borrower':
+            return [...baseFields, ...borrowerFields]
+        case 'lender':
+            return [...baseFields, ...lenderFields]
+        case 'supervisor':
+            return [...baseFields, ...supervisorFields]
+        case 'partner':
+            return [...baseFields, ...partnerFields]
+        case 'admin':
+            return [...baseFields, ...adminFields]
+        default:
+            return baseFields
     }
-    return baseFields
 }
 
-// Define document requirements for each onboarding type
+/* // Define document requirements for each onboarding type [Obsolete]
 const getDocumentRequirements = (formType: string): DocumentRequirement[] => {
     const commonDocs: DocumentRequirement[] = [
         {
@@ -390,9 +312,7 @@ const getDocumentRequirements = (formType: string): DocumentRequirement[] => {
     }
     
     return commonDocs
-}
-
-
+} */
 
 
 // Handle form submission
@@ -402,6 +322,31 @@ const handleFormSubmit = async (submission: OnboardingSubmission): Promise<boole
     await new Promise(resolve => setTimeout(resolve, 1000))
     
     console.log('Form submission:', submission)
+    
+    // Check if user is admin for bypass
+    let isAdmin = false
+    const currentPhone = verificationState?.currentUserPhone.value
+    console.log('Checking admin status for phone:', currentPhone)
+    
+    if (currentPhone) {
+        try {
+            const { fetchTestUser } = await import('../src/config/testUsers')
+            const user = await fetchTestUser(currentPhone)
+            console.log('Admin check - Fetched user:', user)
+            console.log('Admin check - isAdmin:', user?.isAdmin, 'bypassValidation:', user?.bypassValidation)
+            
+            if (user && (user.isAdmin || user.bypassValidation)) {
+                isAdmin = true
+                console.log('✓ Admin user detected - enabling bypass')
+            } else {
+                console.log('✗ User is not admin')
+            }
+        } catch (error) {
+            console.error('Error fetching user for admin check:', error)
+        }
+    } else {
+        console.log('No current user phone found for admin check')
+    }
     
     // TODO: Replace with actual API call
     // Example:
@@ -433,21 +378,37 @@ const handleFormSubmit = async (submission: OnboardingSubmission): Promise<boole
     
     // Update in-memory verification state
     if (verificationState) {
-        verificationState.updateSubmitted(submission.formType)
-        
-        // Automatically update test user via API
+        // Automatically update test user via API first
         if (verificationState.currentUserPhone.value) {
             try {
                 const { updateTestUser } = await import('../src/config/testUsers')
-                await updateTestUser(verificationState.currentUserPhone.value, {
+                
+                // Admin can bypass form validation but still goes through verification screen
+                // (Set verified: false so they see the verification screen for testing)
+                const updates = {
                     submittedFormType: submission.formType,
-                    verified: false
-                })
-                console.log('✓ Test user updated via API')
+                    verified: false // Admin sees verification screen (not auto-verified)
+                }
+                
+                await updateTestUser(verificationState.currentUserPhone.value, updates)
+                console.log('✓ Test user updated via API', isAdmin ? '(Admin: Auto-verified)' : '')
+                console.log('Updates applied:', updates)
             } catch (error) {
                 console.warn('Error updating test user via API (non-critical):', error)
                 // Non-critical - continue with form submission
             }
+        }
+        
+        // Update in-memory verification state
+        // Admin users can bypass form validation but still see verification screen
+        // (They are NOT auto-verified, so they can test the verification flow)
+        verificationState.updateSubmitted(submission.formType)
+        
+        if (isAdmin) {
+            console.log('Admin bypass: Form submitted, but NOT auto-verified - will show verification screen', {
+                submittedFormType: verificationState.state.value.submittedFormType,
+                verified: verificationState.state.value.verified
+            })
         }
     }
     refreshKey.value++ // Trigger UI update
@@ -456,5 +417,262 @@ const handleFormSubmit = async (submission: OnboardingSubmission): Promise<boole
 </script>
 
 <style scoped>
+/* Mobile-first: Forms Container */
+.forms-container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1rem;
+}
 
+/* Section Titles */
+.section-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #212529;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    line-height: 1.3;
+}
+
+.section-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.section-subtitle {
+    color: #6c757d;
+    font-size: 0.875rem;
+    margin-bottom: 1rem;
+    line-height: 1.5;
+}
+
+.warning-text {
+    color: #dc3545;
+    font-weight: 500;
+}
+
+/* Saved Forms Section (Priority) */
+.saved-forms-section {
+    margin-bottom: 0;
+    padding: 0;
+}
+
+.saved-forms-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+}
+
+.saved-form-card {
+    background: white;
+    border-radius: 0.75rem;
+}
+
+.saved-form-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.875rem;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.saved-form-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #212529;
+    margin: 0;
+    flex: 1;
+    min-width: 0;
+    line-height: 1.4;
+}
+
+.saved-badge {
+    background: #0d6efd;
+    color: white;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    padding: 0.25rem 0.625rem;
+    border-radius: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.saved-form-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.btn-continue,
+.btn-delete {
+    width: 100%;
+    min-height: 44px;
+    padding: 0.625rem 0.875rem;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    border-radius: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.btn-continue {
+    background: #0d6efd;
+    border: none;
+    color: white;
+}
+
+.btn-continue:hover {
+    background: #0b5ed7;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(13, 110, 253, 0.3);
+}
+
+.btn-delete {
+    background: white;
+    border: 1px solid #dc3545;
+    color: #dc3545;
+}
+
+.btn-delete:hover {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-icon {
+    font-size: 0.875rem;
+}
+
+/* New Forms Section */
+.new-forms-section {
+    padding: 0;
+}
+
+.new-forms-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+}
+
+.new-form-button {
+    background: white;
+    border: 2px solid #dee2e6;
+    border-radius: 0.75rem;
+    padding: 1rem 1.25rem;
+    min-height: 60px;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #212529;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    text-align: left;
+}
+
+.new-form-button:hover {
+    border-color: #0d6efd;
+    background: #f8f9ff;
+    transform: translateX(4px);
+    box-shadow: 0 2px 4px rgba(13, 110, 253, 0.1);
+}
+
+.form-name {
+    font-weight: 600;
+}
+
+/* Tablet and up (768px+) */
+@media (min-width: 768px) {
+    .forms-container {
+        padding: 2rem;
+    }
+
+    .section-title {
+        font-size: 1.75rem;
+    }
+
+    .section-icon {
+        font-size: 2rem;
+    }
+
+    .section-subtitle {
+        font-size: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .saved-forms-section {
+        padding: 0;
+    }
+
+    .saved-form-card {
+        padding: 1.25rem;
+    }
+
+    .saved-form-title {
+        font-size: 1.125rem;
+    }
+
+    .saved-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.75rem;
+    }
+
+    .btn-continue,
+    .btn-delete {
+        padding: 0.75rem 1rem;
+        font-size: 1rem;
+    }
+
+    .saved-forms-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+    }
+
+    .saved-form-actions {
+        flex-direction: row;
+    }
+
+    .btn-continue,
+    .btn-delete {
+        flex: 1;
+        width: auto;
+    }
+
+    .new-forms-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+
+    .new-form-button {
+        min-height: 70px;
+        font-size: 1.0625rem;
+    }
+}
+
+/* Desktop (992px+) */
+@media (min-width: 992px) {
+    .saved-forms-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .new-forms-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .new-form-button {
+        min-height: 80px;
+        font-size: 1.125rem;
+    }
+}
 </style>

@@ -14,6 +14,9 @@ export interface TestUser {
   // Verification status
   submittedFormType?: FormType | null // null = no form submitted, otherwise the form type
   verified: boolean // true if verified, false if awaiting verification
+  // Admin/Super user flags (for testing)
+  isAdmin?: boolean // true if user is an admin
+  bypassValidation?: boolean // true if user can bypass form validation
 }
 
 interface UpdateTestUserResponse {

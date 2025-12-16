@@ -1,54 +1,52 @@
 <template>
-    <div class="container mt-4">
-        <div class="row justify-content-center">
-            <div class="col-md-8">
-                <div class="card">
-                    <div class="card-body text-center p-5">
-                        <div class="mb-4">
-                            <div class="spinner-border text-primary" role="status" style="width: 4rem; height: 4rem;">
-                                <span class="visually-hidden">Loading...</span>
-                            </div>
-                        </div>
-                        <h2 class="card-title mb-3">Awaiting Verification</h2>
-                        <p class="lead text-muted mb-4">
-                            Your {{ submittedFormType }} onboarding form has been submitted and is currently under review.
+    <div class="awaiting-verification-container">
+        <div class="verification-card">
+            <div class="card-content">
+                <div class="spinner-wrapper">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+                
+                <h2 class="verification-title">Awaiting Verification</h2>
+                
+                <p class="verification-message">
+                    Your {{ submittedFormType }} onboarding form has been submitted and is currently under review.
+                </p>
+                
+                <div class="status-alert">
+                    <strong>Status:</strong> 
+                    <span v-if="verificationStatus">
+                        Submitted on {{ formatDate(verificationStatus.submittedAt) }}
+                    </span>
+                    <span v-else> Pending Review</span>
+                </div>
+                
+                <div class="instructions">
+                    <p>
+                        You will be notified once your application has been verified. 
+                        Until then, you cannot submit additional forms.
+                    </p>
+                </div>
+                
+                <!-- Admin/Testing: Verification Toggle (remove in production) -->
+                <div v-if="showAdminControls" class="admin-controls">
+                    <p class="admin-label">Admin Controls (Testing Only)</p>
+                    <button 
+                        class="btn btn-success verify-button"
+                        @click="() => { console.log('🖱️ [BUTTON] Mark as Verified button clicked'); verifyForm(); }"
+                        :disabled="isVerifying"
+                    >
+                        <span v-if="isVerifying" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        {{ isVerifying ? 'Verifying...' : '✓ Mark as Verified' }}
+                    </button>
+                    <div class="debug-info">
+                        <p>Debug: Check browser console for detailed logs</p>
+                        <p>Current Status: {{ verificationState ? 'Pending Verification' : 'Missing' }}</p>
+                        <p class="debug-details">
+                            <span class="debug-item">Phone: {{ verificationState?.currentUserPhone.value || 'N/A' }}</span>
+                            <span class="debug-item">Form Type: {{ submittedFormTypeValue || verificationState?.state?.value?.submittedFormType || 'N/A' }}</span>
                         </p>
-                        
-                        <div class="alert alert-info" role="alert">
-                            <strong>Status:</strong> 
-                            <span v-if="verificationStatus">
-                                Submitted on {{ formatDate(verificationStatus.submittedAt) }}
-                            </span>
-                            <span v-else> Pending Review</span>
-                        </div>
-                        
-                        <div class="mt-4">
-                            <p class="text-muted">
-                                You will be notified once your application has been verified. 
-                                Until then, you cannot submit additional forms.
-                            </p>
-                        </div>
-                        
-                        <!-- Admin/Testing: Verification Toggle (remove in production) -->
-                        <div v-if="showAdminControls" class="mt-4 pt-4 border-top">
-                            <p class="text-muted small mb-2">Admin Controls (Testing Only)</p>
-                            <button 
-                                class="btn btn-sm btn-success"
-                                @click="() => { console.log('🖱️ [BUTTON] Mark as Verified button clicked'); verifyForm(); }"
-                                :disabled="isVerifying"
-                            >
-                                <span v-if="isVerifying" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                {{ isVerifying ? 'Verifying...' : '✓ Mark as Verified' }}
-                            </button>
-                            <div class="mt-2 text-muted small">
-                                <p class="mb-0">Debug: Check browser console for detailed logs</p>
-                                <p class="mb-0">Current Status: {{ verificationState ? 'Pending Verification' : 'Missing' }} </p>
-                                <p class="mb-0">
-                                    Phone Number: {{ verificationState?.currentUserPhone.value || 'N/A' }} | 
-                                    Form Type: {{ submittedFormTypeValue || verificationState?.state?.value?.submittedFormType || 'N/A' }}
-                                </p>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -224,8 +222,185 @@ const verifyForm = async () => {
 </script>
 
 <style scoped>
-.card {
+/* Mobile-first: Base styles for mobile devices */
+.awaiting-verification-container {
+    width: 100%;
+    padding: 1rem;
+    margin: 0 auto;
+}
+
+.verification-card {
+    background: white;
+    border-radius: 0.5rem;
     box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    overflow: hidden;
+}
+
+.card-content {
+    padding: 1.5rem;
+    text-align: center;
+}
+
+.spinner-wrapper {
+    margin-bottom: 1.5rem;
+    display: flex;
+    justify-content: center;
+}
+
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+    border-width: 0.25rem;
+}
+
+.verification-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: #212529;
+    line-height: 1.3;
+}
+
+.verification-message {
+    font-size: 1rem;
+    color: #6c757d;
+    margin-bottom: 1.5rem;
+    line-height: 1.5;
+}
+
+.status-alert {
+    background-color: #d1ecf1;
+    border: 1px solid #bee5eb;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    color: #0c5460;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+}
+
+.status-alert strong {
+    font-weight: 600;
+}
+
+.instructions {
+    margin-top: 1.5rem;
+}
+
+.instructions p {
+    color: #6c757d;
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.admin-controls {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #dee2e6;
+}
+
+.admin-label {
+    color: #6c757d;
+    font-size: 0.875rem;
+    margin-bottom: 1rem;
+    font-weight: 500;
+}
+
+.verify-button {
+    width: 100%;
+    padding: 0.875rem 1.5rem;
+    font-size: 1rem;
+    min-height: 44px; /* Touch-friendly minimum */
+    border-radius: 0.375rem;
+    font-weight: 500;
+}
+
+.debug-info {
+    margin-top: 1rem;
+    text-align: left;
+}
+
+.debug-info p {
+    color: #6c757d;
+    font-size: 0.8125rem;
+    margin-bottom: 0.5rem;
+    line-height: 1.5;
+    word-break: break-word;
+}
+
+.debug-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.debug-item {
+    display: block;
+    margin-bottom: 0.25rem;
+}
+
+/* Tablet and up (768px+) */
+@media (min-width: 768px) {
+    .awaiting-verification-container {
+        max-width: 600px;
+        padding: 2rem;
+    }
+
+    .card-content {
+        padding: 3rem;
+    }
+
+    .spinner-border {
+        width: 4rem;
+        height: 4rem;
+    }
+
+    .verification-title {
+        font-size: 2rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .verification-message {
+        font-size: 1.125rem;
+        margin-bottom: 2rem;
+    }
+
+    .status-alert {
+        padding: 1.25rem;
+        font-size: 1rem;
+    }
+
+    .verify-button {
+        width: auto;
+        min-width: 200px;
+    }
+
+    .debug-details {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .debug-item {
+        display: inline;
+    }
+
+    .debug-item:not(:last-child)::after {
+        content: ' | ';
+        margin: 0 0.5rem;
+    }
+}
+
+/* Desktop (992px+) */
+@media (min-width: 992px) {
+    .awaiting-verification-container {
+        padding: 2rem 3rem;
+    }
+
+    .verification-title {
+        font-size: 2.25rem;
+    }
 }
 </style>
 

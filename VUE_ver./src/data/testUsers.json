@@ -42,6 +42,17 @@
     "lastName": "Lender",
     "email": "charlie.lender@test.com",
     "submittedFormType": "borrower",
-    "verified": true
+    "verified": false
+  },
+  {
+    "phoneNumber": "admin",
+    "password": "admin",
+    "firstName": "Admin",
+    "lastName": "User",
+    "email": "admin@test.com",
+    "submittedFormType": null,
+    "verified": false,
+    "isAdmin": true,
+    "bypassValidation": true
   }
 ]

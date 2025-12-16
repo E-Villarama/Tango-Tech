@@ -39,6 +39,7 @@ export interface SavedFormData {
     size: number
     type: string
   }>>
+  currentPage?: number // Current page number for multi-page forms
   savedAt: string
   lastModified: string
 }

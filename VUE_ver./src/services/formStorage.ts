@@ -10,6 +10,7 @@ export interface SavedFormData {
     size: number
     type: string
   }>>
+  currentPage?: number // Current page number for multi-page forms
   savedAt: string
   lastModified: string
 }
@@ -24,11 +25,12 @@ export const formStorage = {
    * Save form progress to localStorage
    * Note: Files are not saved, only metadata (name, size, type)
    */
-  saveForm(formType: 'agent' | 'borrower' | 'lender', formData: OnboardingFormData, documentMetadata: Record<string, Array<{ name: string; size: number; type: string }>>): void {
+  saveForm(formType: 'agent' | 'borrower' | 'lender', formData: OnboardingFormData, documentMetadata: Record<string, Array<{ name: string; size: number; type: string }>>, currentPage?: number): void {
     const savedData: SavedFormData = {
       formType,
       formData: { ...formData },
       documentMetadata: { ...documentMetadata },
+      currentPage: currentPage || 1,
       savedAt: new Date().toISOString(),
       lastModified: new Date().toISOString()
     }
