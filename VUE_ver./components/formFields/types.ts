@@ -12,6 +12,7 @@ export interface FormField {
     columnSpan?: number // Bootstrap columns (1-12, default 12 for full width)
     rowSpan?: number // Number of rows to span (for textarea rows, or height multiplier)
     page?: number // Page number (default: 1) - allows splitting fields across pages
+    sectionTitle?: string // Custom title for the page section (used in review page)
     // Document upload specific properties (only used when type === 'document')
     description?: string // Description for document uploads
     acceptedTypes?: string[] // e.g., ['image/jpeg', 'image/png', 'application/pdf']

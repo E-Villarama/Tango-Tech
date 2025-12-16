@@ -1,9 +1,10 @@
 // Form storage service - currently uses localStorage, ready to be replaced with backend API
 
 import type { OnboardingFormData } from '../types/onboarding'
+import type { FormType } from '../types/formTypes'
 
 export interface SavedFormData {
-  formType: 'agent' | 'borrower' | 'lender'
+  formType: FormType
   formData: OnboardingFormData
   documentMetadata: Record<string, Array<{
     name: string
@@ -25,7 +26,7 @@ export const formStorage = {
    * Save form progress to localStorage
    * Note: Files are not saved, only metadata (name, size, type)
    */
-  saveForm(formType: 'agent' | 'borrower' | 'lender', formData: OnboardingFormData, documentMetadata: Record<string, Array<{ name: string; size: number; type: string }>>, currentPage?: number): void {
+  saveForm(formType: FormType, formData: OnboardingFormData, documentMetadata: Record<string, Array<{ name: string; size: number; type: string }>>, currentPage?: number): void {
     const savedData: SavedFormData = {
       formType,
       formData: { ...formData },
@@ -42,7 +43,7 @@ export const formStorage = {
   /**
    * Get saved form data for a specific form type
    */
-  getSavedForm(formType: 'agent' | 'borrower' | 'lender'): SavedFormData | null {
+  getSavedForm(formType: FormType): SavedFormData | null {
     const key = `${STORAGE_PREFIX}${formType}`
     const saved = localStorage.getItem(key)
     
@@ -61,14 +62,14 @@ export const formStorage = {
   /**
    * Check if a saved form exists for a form type
    */
-  hasSavedForm(formType: 'agent' | 'borrower' | 'lender'): boolean {
+  hasSavedForm(formType: FormType): boolean {
     return this.getSavedForm(formType) !== null
   },
 
   /**
    * Delete saved form for a specific form type
    */
-  deleteSavedForm(formType: 'agent' | 'borrower' | 'lender'): void {
+  deleteSavedForm(formType: FormType): void {
     const key = `${STORAGE_PREFIX}${formType}`
     localStorage.removeItem(key)
   },
@@ -76,7 +77,7 @@ export const formStorage = {
   /**
    * Update last modified timestamp
    */
-  updateLastModified(formType: 'agent' | 'borrower' | 'lender'): void {
+  updateLastModified(formType: FormType): void {
     const saved = this.getSavedForm(formType)
     if (saved) {
       saved.lastModified = new Date().toISOString()
@@ -90,7 +91,8 @@ export const formStorage = {
    */
   getAllSavedForms(): Record<string, SavedFormData> {
     const forms: Record<string, SavedFormData> = {}
-    const formTypes: Array<'agent' | 'borrower' | 'lender'> = ['agent', 'borrower', 'lender']
+    // Temporarily disabled - focusing on Agent and Borrower only
+    const formTypes: FormType[] = ['agent', 'borrower'] // , 'lender', 'supervisor', 'partner', 'admin'
     
     formTypes.forEach(type => {
       const saved = this.getSavedForm(type)

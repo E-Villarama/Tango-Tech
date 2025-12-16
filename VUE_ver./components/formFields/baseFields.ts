@@ -10,7 +10,7 @@ export const baseFields: FormField[] = [
         columnSpan: 4,
         placeholder: 'Enter your first name',
         required: true,
-        page: 1
+        page: 1,
     },
     {
         id: 'middleName',

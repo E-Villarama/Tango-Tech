@@ -1,5 +1,7 @@
 // Onboarding form types - ready for database integration
 
+import type { FormType } from './formTypes'
+
 export interface DocumentUpload {
   id: string
   name: string
@@ -14,7 +16,7 @@ export interface OnboardingFormData {
 }
 
 export interface OnboardingSubmission {
-  formType: 'agent' | 'borrower' | 'lender'
+  formType: FormType
   formData: OnboardingFormData
   documents: DocumentUpload[]
   submittedAt?: Date

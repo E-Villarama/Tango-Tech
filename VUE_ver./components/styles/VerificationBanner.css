@@ -1,0 +1,45 @@
+/* Verification Banner Component Styles */
+
+.verification-banner {
+    animation: slideDown 0.3s ease-out;
+}
+
+.verification-banner .alert-heading {
+    display: flex;
+    align-items: center;
+}
+
+.verification-banner .btn-close {
+    flex-shrink: 0;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.verification-banner .btn-close:hover {
+    opacity: 1;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .verification-banner .d-flex {
+        flex-direction: column;
+    }
+    
+    .verification-banner .btn-close {
+        align-self: flex-end;
+        margin-top: -0.5rem;
+        margin-right: -0.5rem;
+    }
+}
+

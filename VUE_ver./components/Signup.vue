@@ -43,6 +43,7 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import type { SignUpData } from '../src/types/auth'
+import './styles/Signup.css'
 
 type FormDataKey = keyof SignUpData | 'confirmPassword'
 
@@ -208,10 +209,4 @@ const handleSignUp = async () => {
     }
 }
 </script>
-
-<style scoped>
-.card {
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-}
-</style>
 

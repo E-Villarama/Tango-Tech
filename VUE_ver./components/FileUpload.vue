@@ -53,6 +53,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import './styles/FileUpload.css'
 
 interface Props {
     fieldId: string
@@ -157,10 +158,4 @@ const removeFile = (index: number) => {
     emit('update:modelValue', uploadedFiles.value)
 }
 </script>
-
-<style scoped>
-.border {
-    background-color: #f8f9fa;
-}
-</style>
 

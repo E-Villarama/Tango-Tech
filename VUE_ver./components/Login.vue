@@ -46,6 +46,7 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import type { LoginCredentials } from '../src/types/auth'
+import './styles/Login.css'
 
 interface FormField {
     id: string
@@ -120,10 +121,4 @@ const handleLogin = async () => {
     }
 }
 </script>
-
-<style scoped>
-.card {
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-}
-</style>
 

@@ -23,20 +23,20 @@
                             <span class="saved-badge">Saved</span>
                         </div>
                         <div class="saved-form-actions">
-                            <button
+                        <button
                                 class="btn btn-primary btn-continue"
-                                @click="selectForm(form, true)"
-                            >
+                            @click="selectForm(form, true)"
+                        >
                                 <span class="btn-icon">▶</span>
                                 Continue Form
-                            </button>
-                            <button
+                        </button>
+                        <button
                                 class="btn btn-outline-danger btn-delete"
-                                @click="deleteSavedForm(form.type)"
-                            >
+                            @click="deleteSavedForm(form.type)"
+                        >
                                 <span class="btn-icon">🗑</span>
-                                Delete Saved Form
-                            </button>
+                            Delete Saved Form
+                        </button>
                         </div>
                     </div>
                 </div>
@@ -65,9 +65,9 @@
         <!-- Form Content -->
         <OnboardingForm
             v-else
-            :form-type="selectedForm?.type as 'agent' | 'borrower' | 'lender'"
+            :form-type="selectedForm?.type as FormType"
             :form-title="selectedForm?.pageTitle || ''"
-            :form-fields="getFormFields(selectedForm?.type as 'agent' | 'borrower' | 'lender')"
+            :form-fields="getFormFields(selectedForm?.type as FormType)"
             :on-submit="handleFormSubmitWithRefresh"
             :load-saved-data="loadSavedData"
             @go-back="goBack"
@@ -80,18 +80,19 @@ import { ref, computed, inject } from 'vue'
 import OnboardingForm from './OnboardingForm.vue'
 import AwaitingVerification from './AwaitingVerification.vue'
 import { formStorage } from '../src/services/formStorage'
-import type { OnboardingSubmission, DocumentRequirement } from '../src/types/onboarding'
+import type { OnboardingSubmission } from '../src/types/onboarding'
 import type { FormType } from '../src/types/formTypes'
 import {
     baseFields,
     agentFields,
     borrowerFields,
-    lenderFields,
-    supervisorFields,
-    partnerFields,
-    adminFields,
+    // lenderFields,
+    // supervisorFields,
+    // partnerFields,
+    // adminFields,
     type FormField
 } from './formFields'
+import './styles/Forms.css'
 
 // Inject verification state from App.vue
 const verificationState = inject<{
@@ -138,30 +139,31 @@ const formOptions: FormOption[] = [
         pageTitle: 'Borrower Onboarding',
         pageContent: 'Borrower Onboarding form content goes here.'
     },
-    { 
-        name: 'Lender Onboarding', 
-        type: 'lender',
-        pageTitle: 'Lender Onboarding',
-        pageContent: 'Lender Onboarding form content goes here.'
-    },
-    {
-        name: "Supervisor Onboarding",
-        type: 'supervisor',
-        pageTitle: 'Supervisor Onboarding',
-        pageContent: 'Supervisor Onboarding form content goes here.',
-    },
-    {
-        name: "Admin Onboarding",
-        type: 'admin',
-        pageTitle: 'Admin Onboarding',
-        pageContent: 'Admin Onboarding form content goes here.',
-    },
-    {   
-        name: "Partner Onboarding",
-        type: 'partner',
-        pageTitle: 'Partner Onboarding',
-        pageContent: 'Partner Onboarding form content goes here.',
-    },
+    // Temporarily disabled - focusing on Agent and Borrower only
+    // { 
+    //     name: 'Lender Onboarding', 
+    //     type: 'lender',
+    //     pageTitle: 'Lender Onboarding',
+    //     pageContent: 'Lender Onboarding form content goes here.'
+    // },
+    // { 
+    //     name: "Supervisor Onboarding",
+    //     type: 'supervisor',
+    //     pageTitle: 'Supervisor Onboarding',
+    //     pageContent: 'Supervisor Onboarding form content goes here.',
+    // },
+    // { 
+    //     name: "Admin Onboarding",
+    //     type: 'admin',
+    //     pageTitle: 'Admin Onboarding',
+    //     pageContent: 'Admin Onboarding form content goes here.',
+    // },
+    // { 
+    //     name: "Partner Onboarding",
+    //     type: 'partner',
+    //     pageTitle: 'Partner Onboarding',
+    //     pageContent: 'Partner Onboarding form content goes here.',
+    // },
 ]
 
 const selectForm = (form: FormOption, continueSaved: boolean = false) => {
@@ -180,7 +182,7 @@ const hasAnySavedForms = computed(() => {
 const formOptionsWithSaved = computed(() => {
     // Access refreshKey to make it reactive
     const _ = refreshKey.value
-    return formOptions.filter(form => formStorage.hasSavedForm(form.type as 'agent' | 'borrower' | 'lender'))
+    return formOptions.filter(form => formStorage.hasSavedForm(form.type as 'agent' | 'borrower'))
 })
 
 
@@ -200,7 +202,7 @@ const hasSavedForm = (formType: string): boolean => {
 
 const deleteSavedForm = (formType: string) => {
     if (confirm('Are you sure you want to delete your saved form? This cannot be undone.')) {
-        formStorage.deleteSavedForm(formType as 'agent' | 'borrower' | 'lender')
+        formStorage.deleteSavedForm(formType as 'agent' | 'borrower')
         // Force reactivity update
         refreshKey.value++
     }
@@ -223,14 +225,15 @@ const getFormFields = (formType: string): FormField[] => {
             return [...baseFields, ...agentFields]
         case 'borrower':
             return [...baseFields, ...borrowerFields]
-        case 'lender':
-            return [...baseFields, ...lenderFields]
-        case 'supervisor':
-            return [...baseFields, ...supervisorFields]
-        case 'partner':
-            return [...baseFields, ...partnerFields]
-        case 'admin':
-            return [...baseFields, ...adminFields]
+        // Temporarily disabled - focusing on Agent and Borrower only
+        // case 'lender':
+        //     return [...baseFields, ...lenderFields]
+        // case 'supervisor':
+        //     return [...baseFields, ...supervisorFields]
+        // case 'partner':
+        //     return [...baseFields, ...partnerFields]
+        // case 'admin':
+        //     return [...baseFields, ...adminFields]
         default:
             return baseFields
     }
@@ -321,60 +324,24 @@ const handleFormSubmit = async (submission: OnboardingSubmission): Promise<boole
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 1000))
     
-    console.log('Form submission:', submission)
-    
     // Check if user is admin for bypass
     let isAdmin = false
     const currentPhone = verificationState?.currentUserPhone.value
-    console.log('Checking admin status for phone:', currentPhone)
     
     if (currentPhone) {
         try {
             const { fetchTestUser } = await import('../src/config/testUsers')
             const user = await fetchTestUser(currentPhone)
-            console.log('Admin check - Fetched user:', user)
-            console.log('Admin check - isAdmin:', user?.isAdmin, 'bypassValidation:', user?.bypassValidation)
             
             if (user && (user.isAdmin || user.bypassValidation)) {
                 isAdmin = true
-                console.log('✓ Admin user detected - enabling bypass')
-            } else {
-                console.log('✗ User is not admin')
             }
         } catch (error) {
             console.error('Error fetching user for admin check:', error)
         }
-    } else {
-        console.log('No current user phone found for admin check')
     }
     
-    // TODO: Replace with actual API call
-    // Example:
-    // const formData = new FormData()
-    // 
-    // // Add form data
-    // Object.entries(submission.formData).forEach(([key, value]) => {
-    //     formData.append(key, String(value))
-    // })
-    // 
-    // // Add documents
-    // submission.documents.forEach((doc, index) => {
-    //     formData.append(`document_${index}`, doc.file)
-    //     formData.append(`document_${index}_name`, doc.name)
-    //     formData.append(`document_${index}_type`, doc.id)
-    // })
-    // 
-    // const response = await fetch('/api/onboarding/submit', {
-    //     method: 'POST',
-    //     body: formData
-    // })
-    // 
-    // if (response.ok) {
-    //     // Update verification state via injected state
-    //     // verificationState.updateSubmitted(submission.formType)
-    //     return true
-    // }
-    // return false
+    // TODO: Replace with actual API call when backend is ready
     
     // Update in-memory verification state
     if (verificationState) {
@@ -391,8 +358,6 @@ const handleFormSubmit = async (submission: OnboardingSubmission): Promise<boole
                 }
                 
                 await updateTestUser(verificationState.currentUserPhone.value, updates)
-                console.log('✓ Test user updated via API', isAdmin ? '(Admin: Auto-verified)' : '')
-                console.log('Updates applied:', updates)
             } catch (error) {
                 console.warn('Error updating test user via API (non-critical):', error)
                 // Non-critical - continue with form submission
@@ -403,276 +368,8 @@ const handleFormSubmit = async (submission: OnboardingSubmission): Promise<boole
         // Admin users can bypass form validation but still see verification screen
         // (They are NOT auto-verified, so they can test the verification flow)
         verificationState.updateSubmitted(submission.formType)
-        
-        if (isAdmin) {
-            console.log('Admin bypass: Form submitted, but NOT auto-verified - will show verification screen', {
-                submittedFormType: verificationState.state.value.submittedFormType,
-                verified: verificationState.state.value.verified
-            })
-        }
     }
     refreshKey.value++ // Trigger UI update
     return true
 }
 </script>
-
-<style scoped>
-/* Mobile-first: Forms Container */
-.forms-container {
-    width: 100%;
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 1rem;
-}
-
-/* Section Titles */
-.section-title {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: #212529;
-    margin-bottom: 0.5rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    line-height: 1.3;
-}
-
-.section-icon {
-    font-size: 1.5rem;
-    flex-shrink: 0;
-}
-
-.section-subtitle {
-    color: #6c757d;
-    font-size: 0.875rem;
-    margin-bottom: 1rem;
-    line-height: 1.5;
-}
-
-.warning-text {
-    color: #dc3545;
-    font-weight: 500;
-}
-
-/* Saved Forms Section (Priority) */
-.saved-forms-section {
-    margin-bottom: 0;
-    padding: 0;
-}
-
-.saved-forms-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 1rem;
-}
-
-.saved-form-card {
-    background: white;
-    border-radius: 0.75rem;
-}
-
-.saved-form-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 0.875rem;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-}
-
-.saved-form-title {
-    font-size: 1rem;
-    font-weight: 600;
-    color: #212529;
-    margin: 0;
-    flex: 1;
-    min-width: 0;
-    line-height: 1.4;
-}
-
-.saved-badge {
-    background: #0d6efd;
-    color: white;
-    font-size: 0.6875rem;
-    font-weight: 600;
-    padding: 0.25rem 0.625rem;
-    border-radius: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    white-space: nowrap;
-    flex-shrink: 0;
-}
-
-.saved-form-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-}
-
-.btn-continue,
-.btn-delete {
-    width: 100%;
-    min-height: 44px;
-    padding: 0.625rem 0.875rem;
-    font-size: 0.9375rem;
-    font-weight: 500;
-    border-radius: 0.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    transition: all 0.2s;
-    white-space: nowrap;
-}
-
-.btn-continue {
-    background: #0d6efd;
-    border: none;
-    color: white;
-}
-
-.btn-continue:hover {
-    background: #0b5ed7;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(13, 110, 253, 0.3);
-}
-
-.btn-delete {
-    background: white;
-    border: 1px solid #dc3545;
-    color: #dc3545;
-}
-
-.btn-delete:hover {
-    background: #dc3545;
-    color: white;
-}
-
-.btn-icon {
-    font-size: 0.875rem;
-}
-
-/* New Forms Section */
-.new-forms-section {
-    padding: 0;
-}
-
-.new-forms-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 0.75rem;
-}
-
-.new-form-button {
-    background: white;
-    border: 2px solid #dee2e6;
-    border-radius: 0.75rem;
-    padding: 1rem 1.25rem;
-    min-height: 60px;
-    font-size: 1rem;
-    font-weight: 500;
-    color: #212529;
-    cursor: pointer;
-    transition: all 0.2s;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: center;
-    text-align: left;
-}
-
-.new-form-button:hover {
-    border-color: #0d6efd;
-    background: #f8f9ff;
-    transform: translateX(4px);
-    box-shadow: 0 2px 4px rgba(13, 110, 253, 0.1);
-}
-
-.form-name {
-    font-weight: 600;
-}
-
-/* Tablet and up (768px+) */
-@media (min-width: 768px) {
-    .forms-container {
-        padding: 2rem;
-    }
-
-    .section-title {
-        font-size: 1.75rem;
-    }
-
-    .section-icon {
-        font-size: 2rem;
-    }
-
-    .section-subtitle {
-        font-size: 1rem;
-        margin-bottom: 1.5rem;
-    }
-
-    .saved-forms-section {
-        padding: 0;
-    }
-
-    .saved-form-card {
-        padding: 1.25rem;
-    }
-
-    .saved-form-title {
-        font-size: 1.125rem;
-    }
-
-    .saved-badge {
-        font-size: 0.75rem;
-        padding: 0.25rem 0.75rem;
-    }
-
-    .btn-continue,
-    .btn-delete {
-        padding: 0.75rem 1rem;
-        font-size: 1rem;
-    }
-
-    .saved-forms-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 1.5rem;
-    }
-
-    .saved-form-actions {
-        flex-direction: row;
-    }
-
-    .btn-continue,
-    .btn-delete {
-        flex: 1;
-        width: auto;
-    }
-
-    .new-forms-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 1rem;
-    }
-
-    .new-form-button {
-        min-height: 70px;
-        font-size: 1.0625rem;
-    }
-}
-
-/* Desktop (992px+) */
-@media (min-width: 992px) {
-    .saved-forms-grid {
-        grid-template-columns: repeat(3, 1fr);
-    }
-
-    .new-forms-grid {
-        grid-template-columns: repeat(3, 1fr);
-    }
-
-    .new-form-button {
-        min-height: 80px;
-        font-size: 1.125rem;
-    }
-}
-</style>

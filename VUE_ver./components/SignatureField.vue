@@ -93,6 +93,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, watch, nextTick } from 'vue'
+import './styles/SignatureField.css'
 
 interface Props {
     fieldId: string
@@ -267,94 +268,4 @@ defineExpose({
     isValid
 })
 </script>
-
-<style scoped>
-.signature-field-wrapper {
-    margin-bottom: 1.5rem;
-}
-
-.signature-instructions {
-    color: #6c757d;
-    font-size: 0.9375rem;
-    line-height: 1.5;
-}
-
-.signature-canvas-container {
-    border: 2px solid #dee2e6;
-    border-radius: 0.375rem;
-    padding: 1rem;
-    background: white;
-}
-
-.signature-canvas {
-    width: 100%;
-    height: 200px;
-    border: 1px dashed #dee2e6;
-    border-radius: 0.25rem;
-    cursor: crosshair;
-    touch-action: none;
-    background: white;
-    transition: border-color 0.15s ease-in-out;
-}
-
-.signature-canvas.is-invalid {
-    border-color: #dc3545;
-    border-style: solid;
-}
-
-.signature-canvas.is-invalid:focus {
-    border-color: #dc3545;
-    box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25);
-}
-
-.canvas-actions {
-    margin-top: 0.75rem;
-    display: flex;
-    justify-content: flex-end;
-}
-
-.signature-type-container {
-    margin-bottom: 0;
-}
-
-.signature-consent {
-    padding: 1rem;
-    background: #f8f9fa;
-    border-radius: 0.375rem;
-    border: 1px solid #dee2e6;
-}
-
-.signature-consent .form-check-label {
-    font-size: 0.9375rem;
-    line-height: 1.5;
-    cursor: pointer;
-}
-
-.signature-preview {
-    padding: 0.75rem;
-    background: #f8f9fa;
-    border-radius: 0.375rem;
-    border: 1px solid #dee2e6;
-}
-
-.signature-preview-image {
-    max-width: 100%;
-    height: auto;
-    border: 1px solid #dee2e6;
-    border-radius: 0.25rem;
-    background: white;
-    padding: 0.5rem;
-}
-
-/* Mobile adjustments */
-@media (max-width: 767px) {
-    .signature-canvas-container {
-        padding: 0.75rem;
-    }
-    
-    .signature-canvas {
-        height: 180px;
-    }
-}
-</style>
 

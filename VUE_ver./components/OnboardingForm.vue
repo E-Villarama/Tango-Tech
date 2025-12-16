@@ -1,33 +1,29 @@
 <template>
     <div class="form-container">
-        <button class="btn btn-secondary mb-3 back-button" @click="$emit('goBack')">
-            ← Back to Form Selection
-        </button>
+        <BackButton label="Back to Form Selection" @click="$emit('goBack')" />
         
         <h1 class="form-title">{{ formTitle }}</h1>
         
         <!-- Page Progress Indicator -->
-        <div v-if="totalPages > 1" class="page-progress mb-4">
-            <div class="progress-bar">
-                <div 
-                    class="progress-fill" 
-                    :style="{ width: `${(currentPage / totalPages) * 100}%` }"
-                ></div>
-            </div>
-            <p class="page-indicator">Page {{ currentPage }} of {{ totalPages }}</p>
-        </div>
+        <ProgressBar 
+            :current-page="currentPage" 
+            :total-pages="totalPages"
+        />
+        
+        <!-- Section Title (Subtitle) -->
+        <h2 v-if="currentPage !== totalPages + 1" class="section-subtitle mb-4">
+            {{ getPageSectionTitle(currentPage) }}
+        </h2>
         
         <form @submit.prevent="handleSubmit">
-            <!-- Debug: Show if no fields -->
-            <div v-if="currentPageFields.length === 0" class="alert alert-info">
-                <p><strong>Debug Info:</strong></p>
-                <p>Total form fields: {{ formFields.length }}</p>
-                <p>Current page: {{ currentPage }}</p>
-                <p>Total pages: {{ totalPages }}</p>
-                <p>Fields by page keys: {{ Object.keys(fieldsByPage).join(', ') }}</p>
-                <p>Fields on current page: {{ fieldsByPage[currentPage]?.length || 0 }}</p>
-            </div>
-            
+            <!-- Review Page -->
+            <ReviewPage
+                v-if="currentPage === totalPages + 1"
+                :sections="reviewSections"
+            />
+
+            <!-- Form Pages -->
+            <template v-else>
             <!-- Dynamic Form Fields - Only show current page -->
             <template v-for="(row, rowIndex) in currentPageFields" :key="`row-${rowIndex}`">
                 <div 
@@ -47,8 +43,8 @@
                                 :label="field.label"
                                 :description="field.description"
                                 :required="field.required"
-                                :accepted-types="field.acceptedTypes"
-                                :max-size="field.maxSize"
+                                :accepted-types="field.acceptedTypes || []"
+                                :max-size="field.maxSize || 0"
                                 :multiple="false"
                                 v-model="documents[field.id]"
                             />
@@ -70,62 +66,22 @@
                                     :placeholder="field.placeholder"
                                     :required="field.required"
                                     :options="field.options || []"
-                                    v-model="formData[field.key]"
+                                    :model-value="Array.isArray(formData[field.key]) ? (formData[field.key] as unknown as string[]) : []"
+                                    @update:model-value="(formData as any)[field.key] = $event"
                                     @update:other-text="handleOtherTextUpdate(field.key, $event)"
                                 />
-                                <template v-else>
-                                    <label :for="field.id" class="form-label">
-                                        {{ field.label }}
-                                        <span v-if="field.required" class="text-danger">*</span>
-                                    </label>
-                                    <!-- Textarea Field -->
-                                    <textarea
-                                        v-if="field.type === 'textarea'"
-                                        class="form-control"
-                                        :id="field.id"
-                                        v-model="formData[field.key]"
-                                        :required="field.required"
-                                        :placeholder="field.placeholder"
-                                        :rows="field.rowSpan || 3"
-                                        :pattern="field.pattern"
-                                        :minlength="field.minlength"
-                                    ></textarea>
-                                    <!-- Select Field -->
-                                    <select
-                                        v-else-if="field.type === 'select'"
-                                        class="form-select"
-                                        :id="field.id"
-                                        v-model="formData[field.key]"
-                                        :required="field.required"
-                                        :style="getInputHeightStyle(field)"
-                                    >
-                                        <option value="" disabled>{{ field.placeholder }}</option>
-                                        <option
-                                            v-for="option in field.options"
-                                            :key="option.value"
-                                            :value="option.value"
-                                        >
-                                            {{ option.label }}
-                                        </option>
-                                    </select>
-                                    <!-- Input Field -->
-                                    <input
-                                        v-else-if="field.type !== 'file'"
-                                        :type="field.type"
-                                        class="form-control"
-                                        :id="field.id"
-                                        v-model="formData[field.key]"
-                                        :required="field.required"
-                                        :placeholder="field.placeholder"
-                                        :pattern="field.pattern"
-                                        :minlength="field.minlength"
-                                        :style="getInputHeightStyle(field)"
-                                    />
-                                </template>
+                                <FormFieldRenderer
+                                    v-else
+                                    :field="field"
+                                    :model-value="(formData[field.key] as string | number | boolean) || (field.type === 'checkbox' ? false : '')"
+                                    @update:model-value="(formData as any)[field.key] = $event"
+                                    :input-style="getInputHeightStyle(field)"
+                                />
                             </template>
                         </div>
                     </template>
                 </div>
+            </template>
             </template>
             
             <!-- Error Message -->
@@ -144,44 +100,37 @@
             </div>
             
             <!-- Navigation Buttons -->
-            <div v-if="totalPages > 1" class="form-navigation">
-                <button 
-                    type="button"
-                    class="btn btn-outline-secondary"
-                    @click="goToPreviousPage"
-                    :disabled="currentPage === 1 || isSubmitting"
-                >
-                    ← Previous
-                </button>
-                
-                <div class="navigation-actions">
-                    <button 
-                        v-if="currentPage < totalPages"
-                        type="button"
-                        class="btn btn-primary"
-                        @click="goToNextPage"
-                        :disabled="(!isCurrentPageValid && !bypassValidation) || isSubmitting"
-                    >
-                        Next →
-                    </button>
-                    <button 
-                        v-else
-                        type="submit" 
-                        class="btn btn-primary"
-                        :disabled="isSubmitting"
-                    >
-                        <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                        {{ isSubmitting ? 'Submitting...' : 'Submit Onboarding Form' }}
-                    </button>
-                </div>
-            </div>
+            <FormNavigationButtons
+                v-if="totalPages > 1"
+                :current-page="currentPage"
+                :total-pages="totalPages"
+                :disabled="(!isCurrentPageValid && !bypassValidation)"
+                :is-submitting="isSubmitting"
+                submit-text="Submit Onboarding Form"
+                @previous="goToPreviousPage"
+                @next="goToNextPage"
+                @review="goToReviewPage"
+                @submit="handleSubmit"
+            />
             
             <!-- Submit Button (for single page forms) -->
-            <div v-if="totalPages === 1" class="form-actions">
+            <div v-if="totalPages === 1 && currentPage !== totalPages + 1" class="form-actions">
+                <button 
+                    type="button"
+                    class="btn btn-primary btn-submit"
+                    @click="goToReviewPage"
+                    :disabled="(!isFormValid && !bypassValidation) || isSubmitting"
+                >
+                    Review →
+                </button>
+            </div>
+            
+            <!-- Submit Button (on review page for single page forms) -->
+            <div v-if="totalPages === 1 && currentPage === totalPages + 1" class="form-actions">
                 <button 
                     type="submit" 
                     class="btn btn-primary btn-submit"
-                    :disabled="isSubmitting"
+                    :disabled="isSubmitting || (!isFormValid && !bypassValidation)"
                 >
                     <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                     {{ isSubmitting ? 'Submitting...' : 'Submit Onboarding Form' }}
@@ -216,32 +165,25 @@ import { ref, reactive, computed, onMounted, watch, inject } from 'vue'
 import FileUpload from './FileUpload.vue'
 import Multiselect from './Multiselect.vue'
 import SignatureField from './SignatureField.vue'
+import FormFieldRenderer from './FormFieldRenderer.vue'
+import ReviewPage from './ReviewPage.vue'
+import ProgressBar from './ProgressBar.vue'
+import { BackButton, EditButton, SubmitButton, FormNavigationButtons, ActionButtons } from './buttons'
 import { formStorage } from '../src/services/formStorage'
 import { fetchTestUser } from '../src/config/testUsers'
+import { getSectionTitle } from './formFields'
+import { useFormValidation } from '../src/composables/useFormValidation'
+import { useFormNavigation } from '../src/composables/useFormNavigation'
+import { useFormLayout } from '../src/composables/useFormLayout'
+import { useFormFields } from '../src/composables/useFormFields'
+import { useFormInitialization } from '../src/composables/useFormInitialization'
 import type { OnboardingFormData, DocumentRequirement, OnboardingSubmission } from '../src/types/onboarding'
 import type { FormType } from '../src/types/formTypes'
-
-interface FormField {
-    id: string
-    key: string
-    label: string
-    type: string // 'text', 'email', 'select', 'document', etc.
-    placeholder: string
-    required?: boolean
-    pattern?: string
-    minlength?: number
-    options?: Array<{ value: string; label: string }> // For select fields
-    columnSpan?: number // Bootstrap columns (1-12, default 12 for full width)
-    rowSpan?: number // Number of rows to span (for textarea rows, or height multiplier)
-    page?: number // Page number (default: 1) - allows splitting fields across pages
-    // Document upload specific properties (only used when type === 'document')
-    description?: string // Description for document uploads
-    acceptedTypes?: string[] // e.g., ['image/jpeg', 'image/png', 'application/pdf']
-    maxSize?: number // in bytes
-}
+import type { FormField } from './formFields/types'
+import './styles/OnboardingForm.css'
 
 interface Props {
-    formType: 'agent' | 'borrower' | 'lender'
+    formType: FormType
     formTitle: string
     formFields: FormField[]
     onSubmit: (submission: OnboardingSubmission) => Promise<boolean> | boolean
@@ -275,79 +217,51 @@ const verificationState = inject<{
 // Check if current user is admin and can bypass validation
 const checkAdminStatus = async () => {
   const currentPhone = verificationState?.currentUserPhone.value
-  console.log('OnboardingForm: Checking admin status for phone:', currentPhone)
   
   if (currentPhone) {
     try {
       const user = await fetchTestUser(currentPhone)
-      console.log('OnboardingForm: Fetched user:', user)
-      console.log('OnboardingForm: isAdmin:', user?.isAdmin, 'bypassValidation:', user?.bypassValidation)
       
       if (user && (user.isAdmin || user.bypassValidation)) {
         bypassValidation.value = true
-        console.log('OnboardingForm: ✓ Admin bypass enabled - validation will be skipped')
-      } else {
-        console.log('OnboardingForm: ✗ User is not admin - validation required')
       }
     } catch (error) {
-      console.error('OnboardingForm: Error fetching user for admin check:', error)
+      console.error('Error fetching user for admin check:', error)
     }
-  } else {
-    console.log('OnboardingForm: No current user phone found for admin check')
   }
 }
 
-// Initialize form data and documents from formFields
+// Use composables for form initialization
+const { initializeFormData, resetFormData: resetFormDataFn } = useFormInitialization(props.formFields, formData)
+
+// Initialize documents separately (not handled by composable)
 props.formFields.forEach(field => {
     if (field.type === 'document') {
         documents[field.id] = []
-    } else if (field.type === 'multiselect') {
-        formData[field.key] = [] // Multiselect uses array
-        formData[`${field.key}Other`] = '' // Initialize other text field
-    } else if (field.type === 'signature') {
-        formData[field.key] = null // Signature data object
-    } else {
-        formData[field.key] = ''
     }
 })
 
-// Group fields by page
-const fieldsByPage = computed(() => {
-    const pages: Record<number, FormField[]> = {}
-    
-    props.formFields.forEach(field => {
-        const page = field.page || 1 // Default to page 1
-        if (!pages[page]) {
-            pages[page] = []
-        }
-        pages[page].push(field)
-    })
-    
-    return pages
-})
+// Initialize form data
+initializeFormData()
 
-// Get total number of pages
-const totalPages = computed(() => {
-    const pageNumbers = Object.keys(fieldsByPage.value).map(Number)
-    return pageNumbers.length > 0 ? Math.max(...pageNumbers) : 1
+// Use composables for organized logic
+const { fieldsByPage, totalPages, currentPageFields, reviewPages } = useFormFields(props.formFields, currentPage)
+const { getRowClass, getRowStyle, getColumnClass, getFieldGridStyle, getInputHeightStyle } = useFormLayout()
+const { isCurrentPageValid, validateForm } = useFormValidation({
+    formFields: props.formFields,
+    formData,
+    documents,
+    fieldsByPage,
+    currentPage,
+    bypassValidation,
+    errorMessage
 })
-
-// Get fields for current page and group them into rows
-const currentPageFields = computed(() => {
-    const pageFields = fieldsByPage.value[currentPage.value] || []
-    
-    // Debug: Log if no fields found
-    if (pageFields.length === 0 && props.formFields.length > 0) {
-        console.warn('No fields found for current page:', {
-            currentPage: currentPage.value,
-            totalPages: totalPages.value,
-            availablePages: Object.keys(fieldsByPage.value).map(Number),
-            totalFields: props.formFields.length,
-            sampleFields: props.formFields.slice(0, 3).map(f => ({ id: f.id, page: f.page }))
-        })
-    }
-    
-    return groupFieldsIntoRows(pageFields)
+const { goToNextPage, goToPreviousPage, goToReviewPage, editSection } = useFormNavigation({
+    currentPage,
+    totalPages,
+    isCurrentPageValid,
+    bypassValidation,
+    errorMessage
 })
 
 // Watch for when formFields change and ensure currentPage is valid
@@ -357,8 +271,9 @@ watch(() => props.formFields, () => {
     const availablePages = Object.keys(fieldsByPage.value).map(Number).sort((a, b) => a - b)
     if (availablePages.length > 0) {
         // If current page doesn't exist or is invalid, go to first available page
-        if (!availablePages.includes(currentPage.value) || currentPage.value < 1) {
-            currentPage.value = availablePages[0]
+        const firstPage = availablePages[0]
+        if (firstPage !== undefined && (!availablePages.includes(currentPage.value) || currentPage.value < 1)) {
+            currentPage.value = firstPage
         }
     } else {
         // If we have fields but no pages (shouldn't happen), reset to page 1
@@ -366,107 +281,81 @@ watch(() => props.formFields, () => {
     }
 }, { immediate: true })
 
-// Group fields into rows (existing logic, but for a subset)
-const groupFieldsIntoRows = (fields: FormField[]): FormField[][] => {
-    const rows: FormField[][] = []
-    let currentRow: FormField[] = []
-    let currentRowSpan = 0
-    
-    fields.forEach(field => {
-        const span = field.columnSpan || 12
-        
-        if (currentRowSpan + span > 12 && currentRow.length > 0) {
-            rows.push([...currentRow])
-            currentRow = []
-            currentRowSpan = 0
-        }
-        
-        currentRow.push(field)
-        currentRowSpan += span
-        
-        if (currentRowSpan >= 12) {
-            rows.push([...currentRow])
-            currentRow = []
-            currentRowSpan = 0
-        }
-    })
-    
-    if (currentRow.length > 0) {
-        rows.push(currentRow)
-    }
-    
-    return rows
+// Get select option label for review display
+const getSelectOptionLabel = (field: FormField, value: string): string => {
+    if (!value || !field.options) return ''
+    const option = field.options.find(opt => opt.value === value)
+    return option?.label || value
 }
 
-// Validate current page only
-const isCurrentPageValid = computed(() => {
+// Get section title for a given page (from section titles mapping)
+const getPageSectionTitle = (pageNum: number): string => {
+    return getSectionTitle(props.formType, pageNum)
+}
+
+// Review page sections
+const reviewSections = computed(() => {
+    return reviewPages.value.map(pageNum => {
+        const pageFields = fieldsByPage.value[pageNum] || []
+        const items = pageFields.map(field => {
+            let value = 'Not answered'
+            
+            if (field.type === 'document') {
+                const docFiles = documents[field.id]
+                value = docFiles && docFiles.length > 0
+                    ? `${docFiles.length} file(s) uploaded`
+                    : 'No files uploaded'
+            } else if (field.type === 'signature') {
+                const sigData = formData[field.key]
+                value = sigData && typeof sigData === 'object' && sigData !== null && 'consentGiven' in sigData && (sigData as any).consentGiven
+                    ? '✓ Signed'
+                    : 'Not signed'
+            } else if (field.type === 'multiselect') {
+                const multiselectValue = formData[field.key]
+                // Type assertion: multiselect fields are always string arrays
+                if (Array.isArray(multiselectValue) && multiselectValue.length > 0) {
+                    const stringArray = multiselectValue as unknown as string[]
+                    value = stringArray.join(', ')
+                    const otherValue = formData[`${field.key}Other`]
+                    if (stringArray.includes('other') && otherValue && typeof otherValue === 'string') {
+                        value += ` (Other: ${otherValue})`
+                    }
+                }
+            } else if (field.type === 'checkbox') {
+                const checkboxValue = formData[field.key]
+                value = checkboxValue ? 'Yes' : 'No'
+            } else if (field.type === 'select') {
+                const fieldValue = formData[field.key]
+                value = getSelectOptionLabel(field, fieldValue ? String(fieldValue) : '') || 'Not answered'
+            } else {
+                const fieldValue = formData[field.key]
+                value = fieldValue ? String(fieldValue) : 'Not answered'
+            }
+            
+            return {
+                label: field.label,
+                value
+            }
+        })
+        
+        return {
+            title: getPageSectionTitle(pageNum),
+            items,
+            onEdit: () => editSection(pageNum)
+        }
+    })
+})
+
+// Validate entire form (for review page)
+const isFormValid = computed(() => {
     // Admin bypass: skip all validation
     if (bypassValidation.value) {
         return true
     }
     
-    const pageFields = fieldsByPage.value[currentPage.value] || []
-    
-    for (const field of pageFields) {
-        if (field.type === 'document') {
-            if (field.required && (!documents[field.id] || documents[field.id].length === 0)) {
-                return false
-            }
-        } else if (field.type === 'multiselect') {
-            if (field.required && (!formData[field.key] || formData[field.key].length === 0)) {
-                return false
-            }
-            // Check "other" text if needed
-            if (formData[field.key] && formData[field.key].includes('other')) {
-                const otherTextKey = `${field.key}Other`
-                if (!formData[otherTextKey] || formData[otherTextKey].trim() === '') {
-                    return false
-                }
-            }
-        } else if (field.type === 'signature') {
-            if (field.required) {
-                const signatureData = formData[field.key] as any
-                if (!signatureData || !signatureData.consentGiven) {
-                    return false
-                }
-                // Both drawn signature and typed name are required
-                if (!signatureData.signatureImage) {
-                    return false
-                }
-                if (!signatureData.typedName || signatureData.typedName.trim() === '') {
-                    return false
-                }
-            }
-        } else {
-            if (field.required && !formData[field.key]) {
-                return false
-            }
-        }
-    }
-    
-    return true
+    // Use validateForm from composable
+    return validateForm()
 })
-
-// Navigation functions
-const goToNextPage = () => {
-    if (currentPage.value < totalPages.value && (isCurrentPageValid.value || bypassValidation.value)) {
-        currentPage.value++
-        // Scroll to top of form
-        window.scrollTo({ top: 0, behavior: 'smooth' })
-        errorMessage.value = '' // Clear any error messages
-    } else if (!isCurrentPageValid.value && !bypassValidation.value) {
-        errorMessage.value = 'Please complete all required fields on this page before continuing.'
-    }
-}
-
-const goToPreviousPage = () => {
-    if (currentPage.value > 1) {
-        currentPage.value--
-        // Scroll to top of form
-        window.scrollTo({ top: 0, behavior: 'smooth' })
-        errorMessage.value = '' // Clear any error messages
-    }
-}
 
 // Load saved form data if requested and check admin status
 onMounted(async () => {
@@ -484,7 +373,10 @@ const loadSavedForm = () => {
         // Load form data
         Object.keys(saved.formData).forEach(key => {
             if (formData.hasOwnProperty(key)) {
-                formData[key] = saved.formData[key]
+                const savedValue = saved.formData[key]
+                if (savedValue !== undefined) {
+                    formData[key] = savedValue
+                }
             }
         })
         
@@ -513,12 +405,15 @@ const saveProgress = () => {
     const documentMetadata: Record<string, Array<{ name: string; size: number; type: string }>> = {}
     
     props.formFields.forEach(field => {
-        if (field.type === 'document' && documents[field.id] && documents[field.id].length > 0) {
-            documentMetadata[field.id] = documents[field.id].map(file => ({
-                name: file.name,
-                size: file.size,
-                type: file.type
-            }))
+        if (field.type === 'document') {
+            const docFiles = documents[field.id]
+            if (docFiles && docFiles.length > 0) {
+                documentMetadata[field.id] = docFiles.map(file => ({
+                    name: file.name,
+                    size: file.size,
+                    type: file.type
+                }))
+            }
         }
     })
     
@@ -531,65 +426,17 @@ const saveProgress = () => {
     }, 3000)
 }
 
-const validateForm = (): boolean => {
-    // Admin bypass: skip all validation
-    if (bypassValidation.value) {
-        console.log('Admin bypass: Skipping form validation')
-        return true
-    }
-    
-    errorMessage.value = ''
-    
-    // Validate all fields (both input and document)
-    for (const field of props.formFields) {
-        if (field.type === 'document') {
-            if (field.required && (!documents[field.id] || documents[field.id].length === 0)) {
-                errorMessage.value = `Please upload ${field.label}`
-                return false
-            }
-        } else if (field.type === 'multiselect') {
-            if (field.required && (!formData[field.key] || formData[field.key].length === 0)) {
-                errorMessage.value = `Please select at least one option for ${field.label}`
-                return false
-            }
-            // Check if "other" is selected and otherText is required
-            if (formData[field.key] && formData[field.key].includes('other')) {
-                const otherTextKey = `${field.key}Other`
-                if (!formData[otherTextKey] || formData[otherTextKey].trim() === '') {
-                    errorMessage.value = `Please specify your other option for ${field.label}`
-                    return false
-                }
-            }
-        } else if (field.type === 'signature') {
-            if (field.required) {
-                const signatureData = formData[field.key] as any
-                if (!signatureData || !signatureData.consentGiven) {
-                    errorMessage.value = 'Please provide your electronic signature and consent.'
-                    return false
-                }
-                // Both drawn signature and typed name are required
-                if (!signatureData.signatureImage) {
-                    errorMessage.value = 'Please draw your signature.'
-                    return false
-                }
-                if (!signatureData.typedName || signatureData.typedName.trim() === '') {
-                    errorMessage.value = 'Please type your full legal name.'
-                    return false
-                }
-            }
-        } else {
-            if (field.required && !formData[field.key]) {
-                errorMessage.value = `Please fill in ${field.label}`
-                return false
-            }
-        }
-    }
-    
-    return true
-}
+// validateForm is now provided by useFormValidation composable
 
 const handleSubmit = async () => {
-    if (!validateForm()) {
+    // If on review page, validate and submit
+    if (currentPage.value === totalPages.value + 1) {
+        if (!validateForm()) {
+            return
+        }
+    } else {
+        // If not on review page, go to review page instead
+        goToReviewPage()
         return
     }
     
@@ -601,9 +448,13 @@ const handleSubmit = async () => {
         // Prepare document uploads from form fields
         const documentUploads = props.formFields
             .filter(field => field.type === 'document')
-            .filter(field => documents[field.id] && documents[field.id].length > 0)
-            .flatMap(field => 
-                documents[field.id].map(file => ({
+            .map(field => {
+                const docFiles = documents[field.id]
+                return docFiles && docFiles.length > 0 ? { field, files: docFiles } : null
+            })
+            .filter((item): item is { field: FormField; files: File[] } => item !== null)
+            .flatMap(({ field, files }) => 
+                files.map(file => ({
                     id: field.id,
                     name: file.name,
                     file: file
@@ -652,15 +503,9 @@ const resetForm = () => {
     props.formFields.forEach(field => {
         if (field.type === 'document') {
             documents[field.id] = []
-        } else if (field.type === 'multiselect') {
-            formData[field.key] = []
-            formData[`${field.key}Other`] = '' // Reset other text field
-        } else if (field.type === 'signature') {
-            formData[field.key] = null // Reset signature
-        } else {
-            formData[field.key] = ''
         }
     })
+    resetFormDataFn()
     
     // Reset to first page
     currentPage.value = 1
@@ -676,75 +521,7 @@ watch(() => props.formType, () => {
 })
 
 
-// Check if row should use CSS Grid (for dynamic height handling)
-const shouldUseGrid = (row: FormField[]): boolean => {
-    // Use grid if row has multiple fields (side-by-side) and any might have different heights
-    // This ensures proper alignment when fields have varying heights
-    if (row.length <= 1) return false
-    
-    // Use grid if any field has rowSpan, is a document, or is a textarea
-    return row.some(field => 
-        (field.rowSpan && field.rowSpan > 1) || 
-        field.type === 'document' ||
-        field.type === 'textarea'
-    )
-}
-
-// Get row class - use CSS Grid for dynamic heights, Bootstrap row for simple layouts
-const getRowClass = (row: FormField[]): string => {
-    return shouldUseGrid(row) ? 'form-row-grid' : 'row g-3'
-}
-
-// Get row style for CSS Grid
-const getRowStyle = (row: FormField[]): string => {
-    if (!shouldUseGrid(row)) return ''
-    
-    // Mobile-first: single column on mobile, then grid on larger screens
-    // Use CSS Grid with auto rows - fields will naturally take the space they need
-    return `display: grid; grid-template-columns: 1fr; grid-auto-rows: min-content; gap: 0.75rem; align-items: start;`
-}
-
-// Get column class - Bootstrap for simple rows, grid for dynamic rows
-// Mobile-first: col-12 (full width) by default, then responsive at md breakpoint
-const getColumnClass = (field: FormField, row: FormField[]): string => {
-    if (!shouldUseGrid(row)) {
-        const span = field.columnSpan || 12
-        // Mobile-first: full width on mobile, then use columnSpan at md breakpoint
-        return `col-12 col-md-${span}`
-    }
-    return '' // CSS Grid handles columns via style
-}
-
-// Get field grid style for CSS Grid rows
-const getFieldGridStyle = (field: FormField, row: FormField[]): string => {
-    if (!shouldUseGrid(row)) return ''
-    
-    const columnSpan = field.columnSpan || 12
-    const rowSpan = field.rowSpan || 1
-    
-    // Mobile-first: single column on mobile (handled by CSS)
-    // Set CSS variable for column span to use in media queries
-    const styles: string[] = []
-    
-    if (rowSpan > 1) {
-        styles.push(`grid-row: span ${rowSpan}`)
-    }
-    
-    // Set CSS variable for column span (used in desktop media query)
-    styles.push(`--column-span: ${columnSpan}`)
-    
-    return styles.join('; ')
-}
-
-// Get input height style based on rowSpan (for non-grid rows)
-const getInputHeightStyle = (field: FormField): string => {
-    if (field.rowSpan && field.rowSpan > 1 && field.type !== 'textarea') {
-        // Approximate height: ~2.5rem per row (including padding and border)
-        const height = field.rowSpan * 2.5
-        return `height: ${height}rem; resize: vertical;`
-    }
-    return ''
-}
+// Layout utilities are now provided by useFormLayout composable
 
 // Handle other text update from multiselect
 const handleOtherTextUpdate = (fieldKey: string, text: string) => {
@@ -760,210 +537,8 @@ const handleSignatureUpdate = (fieldKey: string, signatureData: {
     consentGiven: boolean
     signedAt: string
 }) => {
-    formData[fieldKey] = signatureData
+    // Type assertion needed because OnboardingFormData doesn't explicitly allow signature objects
+    ;(formData as any)[fieldKey] = signatureData
 }
 </script>
-
-<style scoped>
-/* Mobile-first: Base styles for mobile devices */
-.form-container {
-    width: 100%;
-    padding: 1rem;
-    margin: 0 auto;
-}
-
-.form-title {
-    font-size: 1.5rem;
-    font-weight: 600;
-    margin-bottom: 1.5rem;
-    line-height: 1.3;
-}
-
-.back-button {
-    width: 100%;
-    padding: 0.75rem;
-    font-size: 1rem;
-    min-height: 44px; /* Touch-friendly minimum */
-}
-
-.form-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    margin-top: 2rem;
-}
-
-.btn-submit,
-.btn-action {
-    width: 100%;
-    padding: 0.875rem;
-    font-size: 1rem;
-    min-height: 44px; /* Touch-friendly minimum */
-    border-radius: 0.375rem;
-}
-
-/* Form fields spacing */
-.form-label {
-    font-size: 0.9375rem;
-    font-weight: 500;
-    margin-bottom: 0.5rem;
-}
-
-.form-control,
-.form-select {
-    font-size: 1rem;
-    padding: 0.75rem;
-    min-height: 44px; /* Touch-friendly minimum */
-    border-radius: 0.375rem;
-}
-
-/* CSS Grid for dynamic height rows - Mobile first */
-.form-row-grid {
-    display: grid;
-    grid-template-columns: 1fr; /* Single column on mobile */
-    grid-auto-rows: min-content;
-    gap: 1rem;
-    align-items: start;
-}
-
-/* Ensure fields align to top in grid */
-.form-row-grid > div {
-    display: flex;
-    flex-direction: column;
-}
-
-/* Bootstrap row spacing on mobile */
-.row.g-3 {
-    margin-left: 0;
-    margin-right: 0;
-}
-
-.row.g-3 > * {
-    padding-left: 0;
-    padding-right: 0;
-    margin-bottom: 1rem;
-}
-
-/* Support for taller fields with rowSpan */
-.form-control[style*="height"],
-.form-select[style*="height"] {
-    line-height: 1.5;
-}
-
-/* Tablet and up (768px+) */
-@media (min-width: 768px) {
-    .form-container {
-        max-width: 800px;
-        padding: 2rem;
-    }
-
-    .form-title {
-        font-size: 2rem;
-    }
-
-    .back-button {
-        width: auto;
-        padding: 0.5rem 1rem;
-    }
-
-    .form-actions {
-        flex-direction: row;
-        flex-wrap: wrap;
-    }
-
-    .btn-submit,
-    .btn-action {
-        width: auto;
-        flex: 1 1 auto;
-    }
-
-    /* CSS Grid: multi-column on tablet+ */
-    .form-row-grid {
-        grid-template-columns: repeat(12, 1fr);
-        gap: 0.75rem;
-    }
-
-    /* Apply column spans on tablet+ for grid rows */
-    .form-row-grid > div {
-        grid-column: span var(--column-span, 12);
-    }
-}
-
-/* Desktop (992px+) */
-@media (min-width: 992px) {
-    .form-container {
-        padding: 2rem 3rem;
-    }
-
-    .form-title {
-        font-size: 2.25rem;
-    }
-}
-
-/* Page Progress Indicator */
-.page-progress {
-    margin-bottom: 2rem;
-}
-
-.progress-bar {
-    width: 100%;
-    height: 8px;
-    background-color: #e9ecef;
-    border-radius: 4px;
-    overflow: hidden;
-    margin-bottom: 0.5rem;
-}
-
-.progress-fill {
-    height: 100%;
-    background-color: #0d6efd;
-    transition: width 0.3s ease;
-}
-
-.page-indicator {
-    text-align: center;
-    color: #6c757d;
-    font-size: 0.875rem;
-    margin: 0;
-    font-weight: 500;
-}
-
-/* Form Navigation */
-.form-navigation {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 2rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid #dee2e6;
-    gap: 1rem;
-}
-
-.navigation-actions {
-    flex: 1;
-    display: flex;
-    justify-content: flex-end;
-}
-
-.form-navigation .btn {
-    min-height: 44px;
-    padding: 0.75rem 1.5rem;
-    font-size: 1rem;
-}
-
-/* Mobile adjustments for navigation */
-@media (max-width: 767px) {
-    .form-navigation {
-        flex-direction: column;
-    }
-    
-    .navigation-actions {
-        width: 100%;
-    }
-    
-    .form-navigation .btn {
-        width: 100%;
-    }
-}
-</style>
 
