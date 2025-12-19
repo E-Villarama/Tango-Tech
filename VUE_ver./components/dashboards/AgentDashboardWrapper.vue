@@ -12,9 +12,7 @@
     <div v-else class="dashboard-wrapper">
         <div class="container mt-4">
             <!-- Shared Verification Success Banner -->
-            <!-- For testing: Add :force-show="true" to always show the banner -->
-            <!-- To reset banner state: Open browser console and run: localStorage.removeItem('verificationBannerClosed_agent') -->
-            <VerificationBanner form-type="agent" :force-show="true" />
+            <VerificationBanner form-type="agent" />
             
             <AgentDashboard @open-monitoring-form="openMonitoringForm" />
         </div>

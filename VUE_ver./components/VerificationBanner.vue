@@ -26,7 +26,6 @@ import './styles/VerificationBanner.css'
 interface Props {
     formType: FormType
     autoCloseDelay?: number // milliseconds, 0 to disable auto-close
-    forceShow?: boolean // Force show banner (for testing)
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -85,13 +84,6 @@ const setupAutoClose = () => {
 
 // Initialize visibility based on localStorage
 onMounted(() => {
-    // Force show if prop is set (for testing)
-    if (props.forceShow) {
-        isVisible.value = true
-        setupAutoClose()
-        return
-    }
-    
     if (wasClosed()) {
         isVisible.value = false
     } else {

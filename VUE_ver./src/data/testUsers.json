@@ -15,9 +15,7 @@
     "lastName": "Borrower",
     "email": "jane.agentr@test.com",
     "submittedFormType": "agent",
-    "verified": true,
-    "isAdmin": true,
-    "bypassValidation": true
+    "verified": true
   },
   {
     "phoneNumber": "123",

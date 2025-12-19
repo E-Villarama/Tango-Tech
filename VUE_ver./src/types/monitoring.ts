@@ -35,5 +35,6 @@ export interface MonitoringFormField {
     page?: number // For multi-page forms
     description?: string // For camera upload fields
     maxSize?: number // Max file size in bytes for camera uploads
+    pattern?: string // Regex pattern for validation
 }
 

@@ -5,6 +5,39 @@ import type { MonitoringFormField } from '../../src/types/monitoring'
 
 export const monitoringFields: MonitoringFormField[] = [
     // Page 1: Basic Information
+    
+    {
+        id: 'email',
+        key: 'email',
+        label: 'Email',
+        type: 'text',
+        required: true,
+        columnSpan: 12,
+        page: 1,
+        pattern: '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    },
+    { 
+
+        id: 'customer-phone-number',
+        key: 'customerPhoneNumber',
+        label: 'Customer Phone Number',
+        type: 'tel',
+        required: true,
+        columnSpan: 8,
+        page: 1,
+        pattern: '^[0-9]{10}$'
+    },
+    
+    {
+        id: 'customer-qr-code',
+        key: 'customerQR',
+        label: 'Customer QR Code',
+        type: 'text',
+        required: true,
+        columnSpan: 4,
+        page: 1,
+    },
+    
     {
         id: 'borrower-visit-date',
         key: 'visitDate',
@@ -23,53 +56,29 @@ export const monitoringFields: MonitoringFormField[] = [
         columnSpan: 6,
         page: 1
     },
+    
+    // Page 2: Payment
     {
-        id: 'property-condition',
-        key: 'propertyCondition',
-        label: 'Property Condition',
-        type: 'select',
+        id: 'payment',
+        key: 'payment',
+        label: 'Payment',
+        type: 'payment',
         required: true,
-        placeholder: 'Select property condition',
-        options: [
-            { value: 'excellent', label: 'Excellent' },
-            { value: 'good', label: 'Good' },
-            { value: 'fair', label: 'Fair' },
-            { value: 'poor', label: 'Poor' },
-            { value: 'needs-repair', label: 'Needs Repair' }
-        ],
         columnSpan: 12,
-        page: 1
+        page: 2
     },
     
-    // Page 2: Checklist Items
-    {
-        id: 'exterior-inspection',
-        key: 'exteriorInspection',
-        label: 'Exterior Inspection Completed',
-        type: 'checkbox',
-        required: true,
-        columnSpan: 12,
-        page: 2
-    },
-    {
-        id: 'interior-inspection',
-        key: 'interiorInspection',
-        label: 'Interior Inspection Completed',
-        type: 'checkbox',
-        required: true,
-        columnSpan: 12,
-        page: 2
-    },
+    // Page 3: Proof of visit
     {
         id: 'photos-taken',
         key: 'photosTaken',
-        label: 'Photos Taken',
+        label: 'Proof of Visit',
         type: 'camera',
         required: true,
         description: 'Take photos on-site or upload from your device',
         maxSize: 10 * 1024 * 1024, // 10MB
         columnSpan: 12,
-        page: 2
+        page: 3
     },
     {
         id: 'notes',
@@ -79,7 +88,18 @@ export const monitoringFields: MonitoringFormField[] = [
         required: false,
         placeholder: 'Enter any additional observations or notes...',
         columnSpan: 12,
-        page: 2
+        page: 3
+    },
+
+    // Page 4: Signature
+    {
+        id: 'signature',
+        key: 'signature',
+        label: 'Signature',
+        type: 'signature',
+        required: true,
+        columnSpan: 12,
+        page: 4
     }
 ]
 

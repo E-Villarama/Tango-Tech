@@ -3,6 +3,7 @@
         <BackButton label="Back to Dashboard" @click="goBack" />
         
         <h1 class="form-title">Submit Monitoring Form</h1>
+        <h4> Agent ID: {{ agentId }}</h4> <!-- TODO: This will be handled by the backend -->
         
         <!-- Page Progress Indicator -->
         <ProgressBar 
@@ -21,6 +22,11 @@
             <template v-else>
                 <!-- Borrower Selection & Location (Only on Page 1) -->
                 <template v-if="currentPage === 1">
+                    
+                    <!--  
+
+                    TODO: This will be for when we we've fixed assignment of borrowers to agents in the backend / through Admin dashboard 
+                    
                     <div class="mb-3">
                         <label for="borrower-select" class="form-label">
                             Select Borrower <span class="text-danger">*</span>
@@ -45,7 +51,7 @@
                         <div v-if="!selectedBorrowerId && touched" class="invalid-feedback d-block">
                             Please select a borrower.
                         </div>
-                    </div>
+                    </div> -->
 
                     <!-- Location Status -->
                     <div class="mb-3">
@@ -93,6 +99,22 @@
                             :model-value="photos[field.id] || []"
                             @update:model-value="photos[field.id] = $event"
                         />
+                        <!-- Signature Field -->
+                        <signatureField
+                            v-else-if="field.type === 'signature'"
+                            :field-id="field.id"
+                            :label="field.label"
+                            :required="field.required"
+                            @update:signature="handleSignatureUpdate(field.key, $event)"
+                        />
+                        <!-- Payment Field -->
+                        <PaymentField
+                            v-else-if="field.type === 'payment'"
+                            :field-id="field.id"
+                            :label="field.label"
+                            :required="field.required"
+                            @update:payment="handlePaymentUpdate(field.key, $event)"
+                        />
                         <!-- Standard Form Fields -->
                         <FormFieldRenderer
                             v-else
@@ -136,6 +158,8 @@ import { ref, reactive, computed, onMounted, inject } from 'vue'
 import type { MonitoringFormField, MonitoringSubmission } from '../../src/types/monitoring'
 import { monitoringFields } from './monitoringFields'
 import { fetchTestUser } from '../../src/config/testUsers'
+import signatureField from '../SignatureField.vue'
+import PaymentField from '../PaymentField.vue'
 import ProgressBar from '../ProgressBar.vue'
 import FormFieldRenderer from '../FormFieldRenderer.vue'
 import CameraUpload from '../CameraUpload.vue'
@@ -295,6 +319,22 @@ const reviewSections = computed(() => {
     return sections
 })
 
+
+// Helper function to validate pattern
+const validatePattern = (value: any, pattern?: string): boolean => {
+    if (!pattern) return true
+    if (value === null || value === undefined || value === '') return true
+    
+    const stringValue = String(value)
+    try {
+        const regex = new RegExp(pattern)
+        return regex.test(stringValue)
+    } catch (error) {
+        console.warn('Invalid regex pattern:', pattern, error)
+        return true
+    }
+}
+
 // Validate current page only
 const isCurrentPageValid = computed(() => {
     // Admin bypass: skip all validation
@@ -317,8 +357,18 @@ const isCurrentPageValid = computed(() => {
                     return false
                 }
             } else {
-                if (!formData[field.key] || formData[field.key] === '') {
+                const fieldValue = formData[field.key]
+                
+                // Check if required field is filled
+                if (!fieldValue || fieldValue === '') {
                     return false
+                }
+                
+                // Check pattern validation if field has a value and pattern is defined
+                if (fieldValue && field.pattern) {
+                    if (!validatePattern(fieldValue, field.pattern)) {
+                        return false
+                    }
                 }
             }
         }
@@ -349,9 +399,23 @@ const isFormValid = computed(() => {
                 if (!formData[field.key]) {
                     return false
                 }
-            } else {
-                if (!formData[field.key] || formData[field.key] === '') {
+            } else if (field.type === 'payment') {
+                if (!formData[field.key]) {
                     return false
+                }
+            } else {
+                const fieldValue = formData[field.key]
+                
+                // Check if required field is filled
+                if (!fieldValue || fieldValue === '') {
+                    return false
+                }
+                
+                // Check pattern validation if field has a value and pattern is defined
+                if (fieldValue && field.pattern) {
+                    if (!validatePattern(fieldValue, field.pattern)) {
+                        return false
+                    }
                 }
             }
         }
@@ -579,5 +643,28 @@ const handleSubmit = async () => {
 const goBack = () => {
     emit('go-back')
 }
+
+// Handle signature update
+const handleSignatureUpdate = (fieldKey: string, signatureData: {
+    signatureImage: string
+    typedName: string
+    signatureMode: 'both'
+    consentGiven: boolean
+    signedAt: string
+}) => {
+    // Type assertion needed because OnboardingFormData doesn't explicitly allow signature objects
+    ;(formData as any)[fieldKey] = signatureData
+}
+
+// Handle payment update
+const handlePaymentUpdate = (fieldKey: string, paymentData: {
+    hasPaid: boolean
+    amountPaid?: number | null
+    receiptFiles?: File[]
+    reasonNotPaid?: string
+}) => {
+    ;(formData as any)[fieldKey] = paymentData
+}
+
 </script>
 
