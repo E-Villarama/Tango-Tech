@@ -13,25 +13,7 @@
     "password": "123",
     "firstName": "Jane",
     "lastName": "Borrower",
-    "email": "jane.borrower@test.com",
-    "submittedFormType": "borrower",
-    "verified": false
-  },
-  {
-    "phoneNumber": "3",
-    "password": "123",
-    "firstName": "Bob",
-    "lastName": "Lender",
-    "email": "bob.lender@test.com",
-    "submittedFormType": "lender",
-    "verified": true
-  },
-  {
-    "phoneNumber": "4",
-    "password": "123",
-    "firstName": "Alice",
-    "lastName": "Agent",
-    "email": "alice.agent@test.com",
+    "email": "jane.agentr@test.com",
     "submittedFormType": "agent",
     "verified": true
   },
@@ -50,8 +32,8 @@
     "firstName": "Admin",
     "lastName": "User",
     "email": "admin@test.com",
-    "submittedFormType": null,
-    "verified": false,
+    "submittedFormType": "agent",
+    "verified": true,
     "isAdmin": true,
     "bypassValidation": true
   }
