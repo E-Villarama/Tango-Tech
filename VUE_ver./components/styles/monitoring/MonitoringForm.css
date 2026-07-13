@@ -138,24 +138,34 @@
 /* Form Navigation */
 .form-navigation {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
+    gap: 0.75rem;
     margin-top: 2rem;
     padding-top: 1.5rem;
     border-top: 1px solid #dee2e6;
-    gap: 1rem;
 }
 
-.navigation-actions {
-    flex: 1;
-    display: flex;
-    justify-content: flex-end;
-}
-
-.form-navigation .btn {
+.btn-nav {
     min-height: 44px;
     padding: 0.75rem 1.5rem;
     font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+
+/* Larger screens - ensure horizontal alignment */
+@media (min-width: 768px) {
+    .form-navigation {
+        flex-direction: row;
+        justify-content: space-between;
+    }
+    
+    .btn-nav {
+        width: auto;
+        flex: 0 1 auto;
+    }
 }
 
 /* Mobile adjustments for navigation */
@@ -164,11 +174,7 @@
         flex-direction: column;
     }
     
-    .navigation-actions {
-        width: 100%;
-    }
-    
-    .form-navigation .btn {
+    .btn-nav {
         width: 100%;
     }
 }

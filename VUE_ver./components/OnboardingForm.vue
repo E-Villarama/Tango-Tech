@@ -75,6 +75,8 @@
                                     :field="field"
                                     :model-value="(formData[field.key] as string | number | boolean) || (field.type === 'checkbox' ? false : '')"
                                     @update:model-value="(formData as any)[field.key] = $event"
+                                    :touched="touchedFields.has(field.key)"
+                                    @blur="touchedFields.add(field.key)"
                                     :input-style="getInputHeightStyle(field)"
                                 />
                             </template>
@@ -104,7 +106,7 @@
                 v-if="totalPages > 1"
                 :current-page="currentPage"
                 :total-pages="totalPages"
-                :disabled="(!isCurrentPageValid && !bypassValidation)"
+                :disable-forward="(!isCurrentPageValid && !bypassValidation)"
                 :is-submitting="isSubmitting"
                 submit-text="Submit Onboarding Form"
                 @previous="goToPreviousPage"
@@ -228,6 +230,7 @@ const saveMessage = ref('') // Save progress message
 const isSubmitting = ref(false) // Whether form is currently submitting
 const currentPage = ref(1) // Current page number (review page is totalPages + 1)
 const bypassValidation = ref(false) // Admin bypass for validation
+const touchedFields = ref(new Set<string>()) // Track which fields have been touched (per-field)
 
 // Inject verification state to get current user phone (for admin check)
 const verificationState = inject<{
@@ -372,7 +375,7 @@ const reviewSections = computed(() => {
             } else if (field.type === 'signature') {
                 // Check if signature was provided and consent was given
                 const sigData = formData[field.key]
-                value = sigData && typeof sigData === 'object' && sigData !== null && 'consentGiven' in sigData && (sigData as any).consentGiven
+                value = sigData && typeof sigData === 'object' && sigData !== null && 'consentGiven' in sigData && (sigData as { consentGiven: boolean }).consentGiven
                     ? '✓ Signed'
                     : 'Not signed'
             } else if (field.type === 'multiselect') {
@@ -602,16 +605,23 @@ const handleSubmit = async () => {
 /**
  * Resets the form to initial state
  * 
- * Clears all form data, documents, and resets to page 1. If there's saved progress,
- * asks user if they want to delete it too.
+ * Clears all form data, documents, and resets to page 1. Always asks for confirmation
+ * to prevent accidental resets. If there's saved progress, asks user if they want to delete it too.
  */
 const resetForm = () => {
-    // Confirm before resetting if there's saved data
+    // Primary confirmation: Always ask before resetting
+    const confirmed = confirm('Are you sure you want to reset the form? This will clear all your current progress and cannot be undone.')
+    
+    if (!confirmed) {
+        return // User cancelled, don't reset
+    }
+    
+    // Secondary confirmation: Ask about deleting saved form if it exists
     const hasSaved = formStorage.hasSavedForm(props.formType)
     
     if (hasSaved) {
-        const confirmed = confirm('This will clear your current progress. Do you want to also delete your saved form?')
-        if (confirmed) {
+        const deleteSaved = confirm('You have a saved form. Do you want to also delete your saved form?')
+        if (deleteSaved) {
             formStorage.deleteSavedForm(props.formType)
         }
     }
@@ -630,6 +640,7 @@ const resetForm = () => {
     errorMessage.value = ''
     successMessage.value = ''
     saveMessage.value = ''
+    touchedFields.value.clear()
 }
 
 /**
@@ -674,7 +685,7 @@ const handleSignatureUpdate = (fieldKey: string, signatureData: {
     signedAt: string
 }) => {
     // Type assertion needed because OnboardingFormData doesn't explicitly allow signature objects
-    ;(formData as any)[fieldKey] = signatureData
+    ;(formData as Record<string, any>)[fieldKey] = signatureData
 }
 </script>
 

@@ -11,6 +11,7 @@ export const baseFields: FormField[] = [
         placeholder: 'Enter your first name',
         required: true,
         page: 1,
+        pattern: '^[a-zA-Z]+$',
     },
     {
         id: 'middleName',
@@ -78,7 +79,7 @@ export const baseFields: FormField[] = [
             { value: 'v', label: 'V' },
         ]
     },
-    
+
     // Page 2: Contact Information
     {
         id: 'email',
@@ -87,7 +88,9 @@ export const baseFields: FormField[] = [
         type: 'email',
         placeholder: 'Enter your email',
         required: true,
-        page: 2
+        page: 2,
+        // Email validation pattern (optional - FormFieldRenderer also validates email type automatically)
+        pattern: '^[^\s@]+@[^\s@]+\.[^\s@]+$'
     },
     {
         id: 'phoneNumber',
@@ -97,7 +100,10 @@ export const baseFields: FormField[] = [
         columnSpan: 6,
         placeholder: 'Enter your phone number',
         required: true,
-        page: 2
+        page: 2,
+        // Phone validation pattern (optional - FormFieldRenderer also validates tel type automatically)
+        // Supports formats: +1234567890, (123) 456-7890, 123-456-7890, 123.456.7890, etc.
+        pattern: '^[+]?[(]?[0-9]{1,4}[)]?[-\s.]?[(]?[0-9]{1,4}[)]?[-\s.]?[0-9]{1,9}$'
     },
     {
         id: "viberNumber",
@@ -107,7 +113,9 @@ export const baseFields: FormField[] = [
         columnSpan: 6,
         placeholder: "Enter your Viber number",
         required: false,
-        page: 2
+        page: 2,
+        // Phone validation pattern (optional - FormFieldRenderer also validates tel type automatically)
+        pattern: '^[+]?[(]?[0-9]{1,4}[)]?[-\s.]?[(]?[0-9]{1,4}[)]?[-\s.]?[0-9]{1,9}$'
     },
     {
         id: "gender",
@@ -141,7 +149,7 @@ export const baseFields: FormField[] = [
             { value: "widowed", label: "Widowed" },
         ]
     },
-    
+
     // Page 3: Address Information
     {
         id: "address",

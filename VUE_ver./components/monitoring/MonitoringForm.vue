@@ -57,14 +57,22 @@
                     <div class="mb-3">
                         <div class="alert" :class="locationStatus === 'success' ? 'alert-success' : locationStatus === 'error' ? 'alert-danger' : 'alert-info'">
                             <strong>Location:</strong>
-                            <span v-if="locationStatus === 'loading'">Capturing location...</span>
+                            <span v-if="locationStatus === 'loading'">Updating location...</span>
                             <span v-else-if="locationStatus === 'success'">
                                 ✓ Location captured: {{ locationData.latitude }}, {{ locationData.longitude }}
+                            </span>
+                            <span v-else-if="locationStatus === 'error' && lastError">
+                                {{ getLocationErrorMessage(lastError) }}
                             </span>
                             <span v-else-if="locationStatus === 'error'">
                                 ⚠ Could not capture location. Please enable location services.
                             </span>
-                            <span v-else>Location will be captured on form submission.</span>
+                            <span v-else>Location loaded from app launch.</span>
+                            <div v-if="locationData.timestamp" class="mt-1">
+                                <small class="text-muted">
+                                    Last captured: {{ new Date(locationData.timestamp).toLocaleString() }}
+                                </small>
+                            </div>
                         </div>
                         <button
                             type="button"
@@ -72,7 +80,8 @@
                             @click="captureLocation"
                             :disabled="locationStatus === 'loading'"
                         >
-                            {{ locationStatus === 'success' ? 'Update Location' : 'Capture Location' }}
+                            <span v-if="locationStatus === 'loading'" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            {{ locationStatus === 'loading' ? 'Updating...' : 'Update Location' }}
                         </button>
                     </div>
                 </template>
@@ -133,7 +142,7 @@
             <FormNavigationButtons
                 :current-page="currentPage"
                 :total-pages="totalPages"
-                :disabled="(!isCurrentPageValid && !bypassValidation)"
+                :disable-forward="(!isCurrentPageValid && !bypassValidation)"
                 :is-submitting="isSubmitting"
                 :show-previous="currentPage > 1"
                 submit-text="Submit Form"
@@ -150,6 +159,15 @@
                 {{ successMessage }}
             </div>
         </form>
+
+        <!-- Location Permission Modal -->
+        <LocationPermissionModal
+            :show="showLocationModal"
+            :permission-status="globalLocationState.permissionStatus"
+            :is-retrying="locationStatus === 'loading'"
+            @close="showLocationModal = false"
+            @retry="handleRetryLocation"
+        />
     </div>
 </template>
 
@@ -164,8 +182,10 @@ import ProgressBar from '../ProgressBar.vue'
 import FormFieldRenderer from '../FormFieldRenderer.vue'
 import CameraUpload from '../CameraUpload.vue'
 import ReviewPage from '../ReviewPage.vue'
+import LocationPermissionModal from '../LocationPermissionModal.vue'
 import { BackButton, FormNavigationButtons } from '../buttons'
 import { useLocationCapture } from '../../src/composables/useLocationCapture'
+import { useGlobalLocation } from '../../src/composables/useGlobalLocation'
 import { useFormInitialization } from '../../src/composables/useFormInitialization'
 import '../styles/monitoring/MonitoringForm.css'
 
@@ -191,6 +211,7 @@ const touched = ref(false)
 const isSubmitting = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
+const showLocationModal = ref(false) // Show/hide location permission modal
 
 // Inject verification state to get current user phone
 const verificationState = inject<{
@@ -217,7 +238,21 @@ const checkAdminStatus = async () => {
 }
 
 // Use composables
-const { locationStatus, locationData, captureLocation: captureLocationFn } = useLocationCapture()
+const { 
+    locationStatus, 
+    locationData, 
+    permissionStatus,
+    lastError,
+    captureLocation: captureLocationFn,
+    retryLocationCapture,
+    checkPermissionStatus,
+    getLocationErrorMessage
+} = useLocationCapture()
+const { 
+    locationState: globalLocationState,
+    updateLocation: updateGlobalLocation,
+    getLocationData: getGlobalLocationData
+} = useGlobalLocation()
 const { initializeFormData, resetFormData } = useFormInitialization(monitoringFields, formData)
 
 // Initialize form data
@@ -530,10 +565,55 @@ const goToPreviousPage = () => {
 // Location capture wrapper with error handling
 const captureLocation = async () => {
     try {
-        await captureLocationFn()
+        // Update global location state
+        await updateGlobalLocation()
+        
+        // Sync local location data with global state
+        const globalData = getGlobalLocationData()
+        locationData.latitude = globalData.latitude
+        locationData.longitude = globalData.longitude
+        locationData.timestamp = globalData.timestamp
+        if (globalData.accuracy) {
+            locationData.accuracy = globalData.accuracy
+        }
+        
+        // Update local status
+        locationStatus.value = 'success'
         errorMessage.value = ''
+        showLocationModal.value = false
     } catch (error) {
-        errorMessage.value = error instanceof Error ? error.message : 'Error capturing location'
+        const errorMsg = error instanceof Error ? error.message : 'Error capturing location'
+        errorMessage.value = errorMsg
+        locationStatus.value = 'error'
+        
+        // Show modal if permission was denied
+        if (globalLocationState.permissionStatus === 'denied' || errorMsg.includes('Location is not valid')) {
+            showLocationModal.value = true
+        }
+    }
+}
+
+// Handle retry from modal
+const handleRetryLocation = async () => {
+    try {
+        await updateGlobalLocation()
+        
+        // Sync local location data with global state
+        const globalData = getGlobalLocationData()
+        locationData.latitude = globalData.latitude
+        locationData.longitude = globalData.longitude
+        locationData.timestamp = globalData.timestamp
+        if (globalData.accuracy) {
+            locationData.accuracy = globalData.accuracy
+        }
+        
+        locationStatus.value = 'success'
+        errorMessage.value = ''
+        showLocationModal.value = false
+    } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : 'Error capturing location'
+        errorMessage.value = errorMsg
+        locationStatus.value = 'error'
     }
 }
 
@@ -542,7 +622,22 @@ onMounted(async () => {
     // Check if user is admin for bypass validation
     await checkAdminStatus()
     
-    captureLocation()
+    // Load location from global state instead of capturing
+    const globalData = getGlobalLocationData()
+    locationData.latitude = globalData.latitude
+    locationData.longitude = globalData.longitude
+    locationData.timestamp = globalData.timestamp
+    if (globalData.accuracy) {
+        locationData.accuracy = globalData.accuracy
+    }
+    
+    // Set status based on whether we have valid location
+    if (globalData.latitude !== 0 && globalData.longitude !== 0) {
+        locationStatus.value = 'success'
+    } else {
+        locationStatus.value = 'idle'
+    }
+    
     // Reset form
     selectedBorrowerId.value = ''
     currentPage.value = 1

@@ -8,6 +8,10 @@ export interface FormField {
     required?: boolean
     pattern?: string
     minlength?: number
+    maxlength?: number
+    min?: number // For number fields
+    max?: number // For number fields
+    customError?: string // Custom error message (e.g., "Email already exists")
     options?: Array<{ value: string; label: string }> // For select fields
     columnSpan?: number // Bootstrap columns (1-12, default 12 for full width)
     rowSpan?: number // Number of rows to span (for textarea rows, or height multiplier)

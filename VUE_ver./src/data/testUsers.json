@@ -24,7 +24,7 @@
     "lastName": "Lender",
     "email": "charlie.lender@test.com",
     "submittedFormType": "borrower",
-    "verified": false
+    "verified": true
   },
   {
     "phoneNumber": "admin",

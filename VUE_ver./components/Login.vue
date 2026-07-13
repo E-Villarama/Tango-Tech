@@ -5,23 +5,16 @@
                 <h2 class="card-title text-center mb-4">Let's Tango!</h2>
                 
                 <form @submit.prevent="handleLogin">
-                    <div 
+                    <AuthFieldRenderer
                         v-for="field in formFields" 
-                        :key="field.id" 
-                        class="mb-3"
-                    >
-                        <label :for="field.id" class="form-label">{{ field.label }}</label>
-                        <input
-                            :type="field.type"
-                            class="form-control"
-                            :id="field.id"
-                            v-model="formData[field.key]"
-                            :required="field.required"
-                            :placeholder="field.placeholder"
-                            :pattern="field.pattern"
-                            :minlength="field.minlength"
-                        />
-                    </div>
+                        :key="field.id"
+                        :field="field"
+                        v-model="formData[field.key]"
+                        :touched="touchedFields.has(field.key)"
+                        :bypass-validation="isTestUserPhone(formData.phoneNumber)"
+                        @blur="touchedFields.add(field.key)"
+                    />
+                    
                     <div v-if="errorMessage" class="alert alert-danger" role="alert">
                         {{ errorMessage }}
                     </div>
@@ -36,6 +29,9 @@
                         <small class="text-muted d-block mt-2">
                             <strong>Test Users:</strong> See TEST_USERS.md for credentials
                         </small>
+                        <small class="text-muted d-block mt-2">
+                            <a href="#" @click.prevent="$emit('switchToTerms')" class="text-muted text-decoration-none">Terms of Service</a>
+                        </small>
                     </div>
                 </form>
             </div>
@@ -46,6 +42,7 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import type { LoginCredentials } from '../src/types/auth'
+import AuthFieldRenderer from './AuthFieldRenderer.vue'
 import './styles/Login.css'
 
 interface FormField {
@@ -55,7 +52,6 @@ interface FormField {
     type: string
     placeholder: string
     required?: boolean
-    pattern?: string
     minlength?: number
 }
 
@@ -66,6 +62,7 @@ interface Props {
 const props = defineProps<Props>()
 defineEmits<{
     switchToSignup: []
+    switchToTerms: []
 }>()
 
 const formFields: FormField[] = [
@@ -74,9 +71,8 @@ const formFields: FormField[] = [
         key: 'phoneNumber',
         label: 'Phone Number',
         type: 'tel',
-        placeholder: 'Enter phone number',
-        required: true,
-        pattern: '[0-9+\\-\\s()]+'
+        placeholder: 'Enter mobile number (e.g., 9171234567)',
+        required: true
     },
     {
         id: 'password',
@@ -84,7 +80,8 @@ const formFields: FormField[] = [
         label: 'Password',
         type: 'password',
         placeholder: 'Enter password',
-        required: true
+        required: true,
+        minlength: 6
     }
 ]
 
@@ -95,9 +92,66 @@ const formData = reactive<LoginCredentials>({
 
 const errorMessage = ref('')
 const isLoading = ref(false)
+const touchedFields = ref(new Set<string>())
+
+/**
+ * Check if this is a test user phone number
+ * Test users can use simple values like "1", "2", "123", "admin" for easier testing
+ */
+const isTestUserPhone = (phone: string): boolean => {
+    const testPhones = ['1', '2', '123', 'admin']
+    return testPhones.includes(phone.trim())
+}
+
+/**
+ * Validates Philippine mobile number format
+ */
+const validatePhilippineMobile = (phone: string): boolean => {
+    const cleaned = phone.replace(/\D/g, '')
+    const mobileRegex = /^9\d{9}$/
+    return mobileRegex.test(cleaned)
+}
+
+/**
+ * Validates form before submission
+ */
+const validateForm = (): boolean => {
+    // Check if required fields are filled
+    if (!formData.phoneNumber.trim() || !formData.password) {
+        errorMessage.value = 'Please fill in all required fields'
+        return false
+    }
+
+    // Skip phone validation for test users
+    if (!isTestUserPhone(formData.phoneNumber)) {
+        // Validate phone number format for real users
+        if (!validatePhilippineMobile(formData.phoneNumber)) {
+            errorMessage.value = 'Please enter a valid Philippine mobile number (10 digits starting with 9)'
+            return false
+        }
+    }
+
+    // Skip password length validation for test users (they use "123")
+    if (!isTestUserPhone(formData.phoneNumber)) {
+        // Validate password length for real users
+        if (formData.password.length < 6) {
+            errorMessage.value = 'Password must be at least 6 characters'
+            return false
+        }
+    }
+
+    return true
+}
 
 const handleLogin = async () => {
     errorMessage.value = ''
+    
+    // Validate form before submitting
+    if (!validateForm()) {
+        console.log('❌ Form validation failed')
+        return
+    }
+    
     isLoading.value = true
     
     try {
@@ -106,18 +160,23 @@ const handleLogin = async () => {
             password: formData.password
         }
         
+        console.log('🔐 Attempting login with:', { phoneNumber: credentials.phoneNumber, isTestUser: isTestUserPhone(credentials.phoneNumber) })
+        
         // Call the parent's login handler (can be replaced with API call)
         const success = await props.onLogin(credentials)
         
         if (!success) {
+            console.log('❌ Login failed - invalid credentials')
             errorMessage.value = 'Invalid phone number or password'
             isLoading.value = false
+        } else {
+            console.log('✅ Login successful')
         }
         // If successful, the parent component will handle the state change
     } catch (error) {
+        console.error('❌ Login error:', error)
         errorMessage.value = 'An error occurred. Please try again.'
         isLoading.value = false
-        console.error('Login error:', error)
     }
 }
 </script>
